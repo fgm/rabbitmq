@@ -1,0 +1,38 @@
+= RabbitMQ Integration Installation =
+
+1. The Druapl RabbitMQ modules requires the php-amqplib library to run.
+Download the source code from https://github.com/videlalvaro/php-amqplib/tree/v1.0
+Extract the source at either sites/all/modules/rabbitmq/php-amqplib or
+sites/all/libraries/php-amqplib. Rabbit will otherwise fail if it can't find the
+libraries it needs.
+
+2. You'll need provide connection credentials in the form of an array using either Drupal's
+$conf global variable in settings.php or using variable_set(). E.g.
+
+  Option 1. Define in settings.php.
+    global $conf;
+    $conf['rabbitmq_credentials'] = array(
+      'host' => 'localhost',
+      'port' => 5672,
+      'username' => 'guest',
+      'password' => 'guest',
+    );
+
+  Option 2. Manually set one time with variable_set().
+    variable_set('rabbitmq_credentials', array(
+      'host' => 'localhost',
+      'port' => 5672,
+      'username' => 'guest',
+      'password' => 'guest',
+    ));
+
+3. Set RabbitMQ as the queing system for the queues you want RabbitMQ
+to maintain:
+
+  // Set all queues to use RabbitMQ
+  variable_set('queue_default_class', 'RabbitMQQueue');
+
+  or
+
+  // Set a specific queue.
+  variable_set('queue_class_<queue_name>', 'RabbitMQQueue');
