@@ -8,6 +8,10 @@ function rabbitmq_drush_command() {
     'arguments' => array(
       'worker' => t('The name of the queue to process'),
     ),
+    'options' => array(
+      'memory_limit' => t('Set the max amount of memory the worker should occupie before exiting. Given in megabytes.'),
+      'max_iterations' => t('Number of iterations to process before exiting. If not present, exit criteria will not evaluate the amount of iterations processed.'),
+    ),
     'description' => t('Connect to RabbitMQ and wait for jobs to do'),
   );
   return $commands;
@@ -16,7 +20,7 @@ function rabbitmq_drush_command() {
 /**
  * Command callback: Create a queue worker.
  */ 
-function drush_rabbitmq($queue) {
+function drush_rabbitmq_worker($queue) {
   $queue_info = module_invoke_all('rabbitmq_queue_info');
   if (!isset($queue_info[$queue])) {
     $queue_info = module_invoke_all('cron_queue_info');
@@ -42,10 +46,9 @@ function drush_rabbitmq($queue) {
       $item = new stdClass;
       $item->id = $msg->delivery_info['delivery_tag'];
       $item->data = unserialize($msg->body);
-      $item->expire = time() + $lease_time;
 
       // Call the queue worker.
-      $callback($item);
+      $callback($item->data);
 
       // Remove the item from the queue.
       $msg->delivery_info['channel']->basic_ack($item->id);
@@ -57,8 +60,31 @@ function drush_rabbitmq($queue) {
     }
   });
 
+  watchdog('rabbitmq', "RabbitMQ worker ready to recieve messages", array(), WATCHDOG_INFO);
+
   // Begin listening for messages to process.
   while (count($rabbitmq->getChannel()->callbacks)) {
     $rabbitmq->getChannel()->wait();
+
+    // Evaluate if worker should exit.
+    // If the --memory_limit option is set, check the memory usage and
+    // exit if the limit has been exceeded or met.
+    if ($memory_limit = drush_get_option('memory_limit', FALSE)) {
+      $memory_usage = memory_get_peak_usage() / 1024 / 1024;
+      if ($memory_usage >= $memory_limit) {
+        watchdog('rabbitmq', "RabbitMQ worker has reached or exceeded set memory limit of @amountMB and will now exit.", array("@amount" => $memory_limit), WATCHDOG_INFO);
+        break;
+      }
+    }
+
+    // If max iterations are set, don't allow loop to continue longer than max iterations.
+    if ($max_iterations = drush_get_option('max_iterations', FALSE)) {
+      $i = isset($i) ? $i : 0;
+      $i++;
+      if ($max_iterations <= $i) {
+        watchdog('rabbitmq', "Rabbit worker has reached max number of iterations. Exiting.", array(), WATCHDOG_INFO);
+        break;
+      }
+    }
   }
 }

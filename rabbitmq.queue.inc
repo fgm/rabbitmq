@@ -43,11 +43,6 @@ class RabbitMQConnection {
       ));
       $connection = new AMQPConnection($credentials['host'], $credentials['port'], $credentials['username'], $credentials['password']);
 
-      // Ensure the connection is closed when PHP exits.
-      register_shutdown_function(function () use ($connection) {
-        $connection->close();
-      });
-
       self::$connection = $connection;
     }
 
@@ -63,11 +58,6 @@ class DrupalRabbitMQ {
   protected $name;
 
   /**
-   * Object that holds the connection to the RabbitMQ server.
-   */
-  protected $connection;
-
-  /**
    * Object that holds a channel to RAbbitMQ.
    */
   protected $channel;
@@ -80,15 +70,6 @@ class DrupalRabbitMQ {
    */
   public function __construct($name) {
     $this->name = $name;
-  }
-
-  /**
-   * Close the connections to the queue(s).
-   */
-  public function __destruct() {
-    if ($this->channel) {
-      $this->channel->close();
-    }
   }
 
   /**
@@ -159,11 +140,12 @@ class RabbitMQQueue extends DrupalRabbitMQ implements DrupalReliableQueueInterfa
    *   queue.
    */
   public function createItem($data) {
+    $channel = $this->getChannel();
     // Data must be a string.
     $item = new AMQPMessage(serialize($data), array(
       'delivery_mode' => 2,
     ));
-    $this->getChannel()->basic_publish($item, '', $this->name);
+    $channel->basic_publish($item, '', $this->name);
     watchdog('rabbitmq', "Item sent to @queue", array("@queue" => $this->name), WATCHDOG_INFO);
   }
 
