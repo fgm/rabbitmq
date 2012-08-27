@@ -40,8 +40,9 @@ class RabbitMQConnection {
         'port' => 5672,
         'username' => 'guest',
         'password' => 'guest',
+        'vhost' => '/',
       ));
-      $connection = new AMQPConnection($credentials['host'], $credentials['port'], $credentials['username'], $credentials['password']);
+      $connection = new AMQPConnection($credentials['host'], $credentials['port'], $credentials['username'], $credentials['password'], $credentials['vhost']);
 
       self::$connection = $connection;
     }
