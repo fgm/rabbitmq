@@ -14,7 +14,23 @@ function rabbitmq_drush_command() {
     ),
     'description' => t('Connect to RabbitMQ and wait for jobs to do'),
   );
+
+  $commands['rabbitmq-queue-info'] = array(
+    'arguments' => array(
+      'queue_name' => t('The name of the queue to get information from'),
+    ),
+  );
   return $commands;
+}
+
+/**
+ * Command callback: rabbitmq-queue-info.
+ */
+function drush_rabbitmq_queue_info($queue_name) {
+  $queue = DrupalQueue::get($queue_name);
+  $items = $queue->numberOfItems();
+
+  drush_print("$queue_name:\t$items");
 }
 
 /**

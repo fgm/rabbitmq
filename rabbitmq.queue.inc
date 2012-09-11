@@ -66,7 +66,7 @@ class DrupalRabbitMQ {
   /**
    * Start working with a queue.
    *
-   * @param $name
+   * @param string $name
    *   Arbitrary string. The name of the queue to work with.
    */
   public function __construct($name) {
@@ -93,13 +93,13 @@ class DrupalRabbitMQ {
    */
   protected function getQueue(AMQPChannel $channel, Array $options = array()) {
     $queue_options = array(
-      'passive' => false,
+      'passive' => FALSE,
       // Whether the queue is persistant or not. A durable queue
       // is slower but can survive if rabbitMQ fails.
-      'durable' => true,
-      'exclusive' => false,
-      'auto_delete' => false,
-      'nowait' => 'false',
+      'durable' => TRUE,
+      'exclusive' => FALSE,
+      'auto_delete' => FALSE,
+      'nowait' => 'FALSE',
       'arguments' => NULL,
       'ticket' => NULL,
     );
