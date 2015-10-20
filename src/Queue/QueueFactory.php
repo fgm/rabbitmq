@@ -25,6 +25,7 @@ use Psr\Log\LoggerInterface;
  */
 class QueueFactory {
   const SERVICE_NAME = 'queue.rabbitmq';
+  const DEFAULT_QUEUE_NAME = 'default';
 
   /**
    * The server factory service.

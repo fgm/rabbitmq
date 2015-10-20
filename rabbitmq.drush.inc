@@ -6,7 +6,11 @@
  */
 
 use Drupal\Core\Queue\QueueWorkerInterface;
+use Drupal\rabbitmq\Connection;
 use Drupal\rabbitmq\Queue\Queue;
+use Drupal\rabbitmq\Queue\QueueFactory;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Message\AMQPMessage;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -28,11 +32,66 @@ function rabbitmq_drush_command() {
     'arguments' => [
       'queue_name' => 'The name of the queue to get information from',
     ],
+    'description' => 'Return information about a queue',
     // @see https://github.com/drush-ops/drush/issues/1667
     // 'required-arguments' => TRUE,
   ];
 
+  $commands['rabbitmq-test-producer'] = [
+    'description' => 'Run the test producer from https://www.rabbitmq.com/tutorials/tutorial-one-php.html',
+  ];
+
+  $commands['rabbitmq-test-consumer'] = [
+    'description' => 'Run the test consumer from https://www.rabbitmq.com/tutorials/tutorial-one-php.html',
+  ];
+
   return $commands;
+}
+
+/**
+ * Command callback for rabbitmq-test-producer.
+ */
+function drush_rabbitmq_test_producer() {
+  $connection = new AMQPStreamConnection(
+    Connection::DEFAULT_HOST,
+    Connection::DEFAULT_PORT,
+    Connection::DEFAULT_USER,
+    Connection::DEFAULT_PASS);
+  $channel = $connection->channel();
+  $routing_key = $queue_name = 'hello';
+  $channel->queue_declare($queue_name, FALSE, FALSE, FALSE, FALSE);
+  $message = new AMQPMessage('Hello World!');
+  $channel->basic_publish($message, '', $routing_key);
+  echo " [x] Sent 'Hello World!'\n";
+  $channel->close();
+  $connection->close();
+}
+
+/**
+ * Command callback for rabbitmq-test-consumer.
+ */
+function drush_rabbitmq_test_consumer() {
+  $connection = new AMQPStreamConnection(
+    Connection::DEFAULT_HOST,
+    Connection::DEFAULT_PORT,
+    Connection::DEFAULT_USER,
+    Connection::DEFAULT_PASS);
+  $channel = $connection->channel();
+  $queue_name = 'hello';
+  $channel->queue_declare($queue_name, FALSE, FALSE, FALSE, FALSE);
+  echo ' [*] Waiting for messages. To exit press CTRL+C', "\n";
+
+  $callback = function($msg) {
+    echo " [x] Received ", $msg->body, "\n";
+  };
+
+  $channel->basic_consume($queue_name, '', FALSE, TRUE, FALSE, FALSE, $callback);
+
+  while (count($channel->callbacks)) {
+    $channel->wait();
+  }
+  $channel->close();
+  $connection->close();
 }
 
 /**

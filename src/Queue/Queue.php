@@ -159,7 +159,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    * @param object $item
    *   An item returned by DrupalQueueInterface::claimItem().
    *
-   * @return true
+   * @return bool
    *   Always pretend to succeed. Actually, the item will be released back when
    *   the connection closes, so this just eliminates that capability to send an
    *   acknowledgement to the server which would remove the item from the queue.

@@ -13,15 +13,35 @@ use PhpAmqpLib\Connection\AMQPStreamConnection;
 /**
  * RabbitMQ connection class.
  *
- * This class is abstracted from RabbitMQQueue so that a connection can still be
- * obtained and used independently from the Drupal queuing system.
+ * Related classes:
+ *
+ * - \Drupal\rabbitmq\Connection (this class): a factory for a
+ *   \PhpAmqpLib\Connection\AMQPStreamConnection instance
+ * - \PhpAmqpLib\Connection\AMQPStreamConnection: the RabbitMQ "connection",
+ *   which wraps a BSD socket, handling protocol negotiation and authentication.
+ *   It is not generally used as such, but as the base connection on which a
+ *   "channel" is allocated. It needs a close() after use, after its channels
+ *   have themselves been closed.
+ * - \PhpAmqpLib\Channel\Channel: the actual communication tube, allocated on a
+ *   given AMQPStreamConnection, on which "queue" insteance are declared and
+ *   handled. They are created from the connection and need a close() after use.
+ * - \AMQPQueue: a queue similar to the ones expected by the Drupal Queue API.
+ * - \PhpAmqpLib\Message; this is the payload published over a queue by
+ *   producers, and which consumers receive in their $item->data.
+ *
+ * This class is not tied with the Drupal Queue API.
  */
 class Connection {
+  const DEFAULT_SERVER_ALIAS = 'localhost';
+  const DEFAULT_HOST = self::DEFAULT_SERVER_ALIAS;
+  const DEFAULT_PORT = 5672;
+  const DEFAULT_USER = 'guest';
+  const DEFAULT_PASS = 'guest';
 
   /**
    * The singleton RabbitMQ connection.
    *
-   * @var \PhpAmqpLib\Connection\AMQPConnection
+   * @var \PhpAmqpLib\Connection\AMQPStreamConnection
    */
   protected static $connection;
 
@@ -40,8 +60,8 @@ class Connection {
    */
   public function __construct(Settings $settings) {
     // Cannot continue if the library wasn't loaded.
-    assert('class_exists("\PhpAmqpLib\Connection\AMQPConnection")',
-      "Could not find php-amqplib. See the rabbitmq/README.md file for details."
+    assert('class_exists("\PhpAmqpLib\Connection\AMQPStreamConnection")',
+      'Could not find php-amqplib. See the rabbitmq/README.md file for details.'
     );
 
     $this->settings = $settings;
@@ -53,10 +73,10 @@ class Connection {
   public function getConnection() {
     if (!self::$connection) {
       $default_credentials = [
-        'host' => 'localhost',
-        'port' => 5672,
-        'username' => 'guest',
-        'password' => 'guest',
+        'host' => static::DEFAULT_SERVER_ALIAS,
+        'port' => static::DEFAULT_PORT,
+        'username' => static::DEFAULT_USER,
+        'password' => static::DEFAULT_PASS,
         'vhost' => '/',
       ];
       $credentials = $this->settings->get('rabbitmq.credentials', $default_credentials);
