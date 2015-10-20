@@ -8,7 +8,7 @@
 /**
  * Provides options for RabbitMQ queues.
  *
- * @return array
+ * @return array<string,array<string,bool|null>>
  *   A hash of queue options, indexed by queue name.
  */
 function hook_rabbitmq_queue_info() {
@@ -21,7 +21,7 @@ function hook_rabbitmq_queue_info() {
     'durable' => TRUE,
     'exclusive' => FALSE,
     'auto_delete' => FALSE,
-    'nowait' => 'FALSE',
+    'nowait' => FALSE,
     'arguments' => NULL,
     'ticket' => NULL,
   ];

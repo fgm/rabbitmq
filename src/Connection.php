@@ -41,7 +41,7 @@ class Connection {
   public function __construct(Settings $settings) {
     // Cannot continue if the library wasn't loaded.
     assert('class_exists("\PhpAmqpLib\Connection\AMQPConnection")',
-      "Could not find php-amqplib. Please add it to your sites's composer.json. See the rabbitmq/README.md file for details."
+      "Could not find php-amqplib. See the rabbitmq/README.md file for details."
     );
 
     $this->settings = $settings;

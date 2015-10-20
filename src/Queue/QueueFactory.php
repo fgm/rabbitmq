@@ -57,7 +57,8 @@ class QueueFactory {
    * @param \Psr\Log\LoggerInterface $logger
    *   The logger service for the RabbitMQ channel.
    */
-  public function __construct(Connection $connection_factory, ModuleHandlerInterface $modules, LoggerInterface $logger) {
+  public function __construct(Connection $connection_factory,
+    ModuleHandlerInterface $modules, LoggerInterface $logger) {
     $this->connectionFactory = $connection_factory;
     $this->logger = $logger;
     $this->modules = $modules;

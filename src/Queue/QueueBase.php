@@ -8,6 +8,7 @@
 namespace Drupal\rabbitmq\Queue;
 
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\rabbitmq\Connection;
 use PhpAmqpLib\Channel\AMQPChannel;
 use Psr\Log\LoggerInterface;
 
@@ -19,6 +20,8 @@ abstract class QueueBase {
 
   /**
    * Object that holds a channel to RabbitMQ.
+   *
+   * @var \PhpAmqpLib\Channel\AMQPChannel
    */
   protected $channel;
 
@@ -70,6 +73,9 @@ abstract class QueueBase {
 
   /**
    * Obtain an initialized channel to the queue.
+   *
+   * @return \PhpAmqpLib\Channel\AMQPChannel
+   *   The queue channel.
    */
   public function getChannel() {
     if ($this->channel) {
