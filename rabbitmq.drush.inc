@@ -1,86 +1,120 @@
 <?php
 
 /**
- * Implementation of hook_drush_command().
+ * @file
+ * Drush plugin for RabbitMQ.
+ */
+
+use Drupal\Core\Queue\QueueWorkerInterface;
+use Drupal\rabbitmq\Queue\Queue;
+use Symfony\Component\Yaml\Yaml;
+
+/**
+ * Implements hook_drush_command().
  */
 function rabbitmq_drush_command() {
-  $commands['rabbitmq-worker'] = array(
-    'arguments' => array(
-      'worker' => t('The name of the queue to process'),
-    ),
-    'options' => array(
-      'memory_limit' => t('Set the max amount of memory the worker should occupie before exiting. Given in megabytes.'),
-      'max_iterations' => t('Number of iterations to process before exiting. If not present, exit criteria will not evaluate the amount of iterations processed.'),
-    ),
-    'description' => t('Connect to RabbitMQ and wait for jobs to do'),
-  );
+  $commands['rabbitmq-worker'] = [
+    'arguments' => [
+      'worker' => 'The name of the queue to process',
+    ],
+    'options' => [
+      'memory_limit' => 'Set the max amount of memory the worker should occupy before exiting. Given in megabytes.',
+      'max_iterations' => 'Number of iterations to process before exiting. If not present, exit criteria will not evaluate the amount of iterations processed.',
+    ],
+    'description' => 'Connect to RabbitMQ and wait for jobs to do',
+  ];
 
-  $commands['rabbitmq-queue-info'] = array(
-    'arguments' => array(
-      'queue_name' => t('The name of the queue to get information from'),
-    ),
-  );
+  $commands['rabbitmq-queue-info'] = [
+    'arguments' => [
+      'queue_name' => 'The name of the queue to get information from',
+    ],
+    // @see https://github.com/drush-ops/drush/issues/1667
+    // 'required-arguments' => TRUE,
+  ];
+
   return $commands;
 }
 
 /**
- * Command callback: rabbitmq-queue-info.
+ * Command callback for rabbitmq-queue-info.
  */
-function drush_rabbitmq_queue_info($queue_name) {
-  $queue = DrupalQueue::get($queue_name);
-  $items = $queue->numberOfItems();
+function drush_rabbitmq_queue_info($queue_name = NULL) {
+  if (empty($queue_name)) {
+    return;
+  }
 
-  drush_print("$queue_name:\t$items");
+  /* @var \Drupal\Core\Queue\QueueFactory $queue_factory */
+  $queue_factory = \Drupal::service('queue');
+
+  $queue = $queue_factory->get($queue_name);
+  $count = $queue->numberOfItems();
+  echo Yaml::dump([$queue_name => $count]);
 }
 
 /**
  * Command callback: Create a queue worker.
- */ 
-function drush_rabbitmq_worker($queue) {
-  $queue_info = module_invoke_all('rabbitmq_queue_info');
-  if (!isset($queue_info[$queue])) {
-    $queue_info = module_invoke_all('cron_queue_info');
+ */
+function drush_rabbitmq_worker($queue_name) {
+  /* @var \Drupal\Core\Queue\QueueWorkerManager $worker_manager */
+  $worker_manager = \Drupal::service('plugin.manager.queue_worker');
+
+  $workers = $worker_manager->getDefinitions();
+
+  if (!isset($workers[$queue_name])) {
+    return drush_set_error('rabbitmq', t('No known worker for queue @queue', [
+      '@queue' => $queue_name,
+    ]));
   }
-  if (!isset($queue_info[$queue], $queue_info[$queue]['worker callback'])) {
-    return drush_set_error("No known callback for queue: $queue");
-  }
-  $callback = $queue_info[$queue]['worker callback'];
 
   // Before we start listening for messages, make sure the callback
   // worker is callable.
-  if (!function_exists($callback)) {
-    return drush_set_error("Callback function for queue is not callable.");
+  $worker = $worker_manager->createInstance($queue_name);
+  if (!($worker instanceof QueueWorkerInterface)) {
+    return drush_set_error("Worker for queue does not implement the worker interface.");
   }
 
-  $rabbitmq = new DrupalRabbitMQ($queue);
-  $rabbitmq->getChannel()->basic_qos(null, 1, null);
-  $rabbitmq->getChannel()->basic_consume($queue, '', false, false, false, false, function ($msg) use ($callback, $queue) {
-    watchdog('rabbitmq', 'Recieved queued message: :id', array(':id' => $msg->delivery_info['delivery_tag']), WATCHDOG_INFO);
+  /* @var \Drupal\Core\Queue\QueueFactory $queue_factory */
+  $queue_factory = \Drupal::service('queue');
+  /* @var \Drupal\rabbitmq\Queue\queue $queue */
+  $queue = $queue_factory->get($queue_name);
+
+  /** @var \Psr\Log\LoggerInterface $logger */
+  $logger = \Drupal::service('logger.channel.rabbitmq');
+  $callback = function ($msg) use ($worker, $queue_name, $logger) {
+    $logger->info('Received queued message: :id', [
+      ':id' => $msg->delivery_info['delivery_tag'],
+    ]);
 
     try {
       // Build the item to pass to the queue worker.
-      $item = new stdClass;
-      $item->id = $msg->delivery_info['delivery_tag'];
-      $item->data = unserialize($msg->body);
+      $item = (object) [
+        'id' => $msg->delivery_info['delivery_tag'],
+        'data' => unserialize($msg->body),
+      ];
 
       // Call the queue worker.
-      $callback($item->data);
+      $worker->processItem($item->data);
 
       // Remove the item from the queue.
       $msg->delivery_info['channel']->basic_ack($item->id);
-      watchdog('rabbitmq', "Item :id acknowledged from @queue", array(":id" => $item->id, "@queue" => $queue), WATCHDOG_INFO);
+      $logger->info('Item :id acknowledged from @queue', [
+        ':id' => $item->id,
+        '@queue' => $queue_name,
+      ]);
     }
-    catch (Exception $e) {
+    catch (\Exception $e) {
       watchdog_exception('rabbitmq', $e);
       $msg->delivery_info['channel']->basic_reject($msg->delivery_info['delivery_tag'], TRUE);
     }
-  });
+  };
+  $queue->getChannel()->basic_qos(NULL, 1, NULL);
+  $queue->getChannel()->basic_consume($queue_name, '', FALSE, FALSE, FALSE, FALSE, $callback);
 
-  watchdog('rabbitmq', "RabbitMQ worker ready to recieve messages", array(), WATCHDOG_INFO);
+  $logger->info("RabbitMQ worker ready to receive messages", [], WATCHDOG_INFO);
 
   // Begin listening for messages to process.
-  while (count($rabbitmq->getChannel()->callbacks)) {
-    $rabbitmq->getChannel()->wait();
+  while (count($queue->getChannel()->callbacks)) {
+    $queue->getChannel()->wait();
 
     // Evaluate if worker should exit.
     // If the --memory_limit option is set, check the memory usage and
@@ -88,17 +122,20 @@ function drush_rabbitmq_worker($queue) {
     if ($memory_limit = drush_get_option('memory_limit', FALSE)) {
       $memory_usage = memory_get_peak_usage() / 1024 / 1024;
       if ($memory_usage >= $memory_limit) {
-        watchdog('rabbitmq', "RabbitMQ worker has reached or exceeded set memory limit of @amountMB and will now exit.", array("@amount" => $memory_limit), WATCHDOG_INFO);
+        $logger->notice('RabbitMQ worker has reached or exceeded set memory limit of @amountMB and will now exit.', [
+          '@amount' => $memory_limit,
+        ]);
         break;
       }
     }
 
-    // If max iterations are set, don't allow loop to continue longer than max iterations.
+    // If max_iterations is set, don't allow loop to continue longer than
+    // max_iterations.
     if ($max_iterations = drush_get_option('max_iterations', FALSE)) {
-      $i = isset($i) ? $i : 0;
-      $i++;
-      if ($max_iterations <= $i) {
-        watchdog('rabbitmq', "Rabbit worker has reached max number of iterations. Exiting.", array(), WATCHDOG_INFO);
+      $iteration = isset($iteration) ? $iteration : 0;
+      $iteration++;
+      if ($max_iterations <= $iteration) {
+        $logger->notice('Rabbit worker has reached max number of iterations. Exiting.');
         break;
       }
     }
