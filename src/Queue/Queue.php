@@ -9,7 +9,6 @@ namespace Drupal\rabbitmq\Queue;
 
 use Drupal\Core\Queue\ReliableQueueInterface;
 use PhpAmqpLib\Message\AMQPMessage;
-use Symfony\Component\Validator\Constraints\True;
 
 /**
  * RabbitMQ queue implementation.

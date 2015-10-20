@@ -13,9 +13,9 @@
 
 namespace Drupal\rabbitmq\Queue;
 
+use Doctrine\Common\Util\Debug;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\rabbitmq\Connection;
-use Drupal\rabbitmq\Queue;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -70,12 +70,11 @@ class QueueFactory {
    * @param string $name
    *   The name of the Queue holding key and value pairs.
    *
-   * @return \Drupal\rabbitmq\Queue\Queue
+   * @return Queue
    *   The Queue object
    */
   public function get($name) {
-    $connection = $this->connectionFactory->getConnection();
-    $queue = new \Drupal\rabbitmq\Queue\Queue($name, $connection, $this->modules, $this->logger);
+    $queue = new Queue($name, $this->connectionFactory, $this->modules, $this->logger);
     return $queue;
   }
 

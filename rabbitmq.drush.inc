@@ -77,6 +77,8 @@ function drush_rabbitmq_worker($queue_name) {
   $queue_factory = \Drupal::service('queue');
   /* @var \Drupal\rabbitmq\Queue\queue $queue */
   $queue = $queue_factory->get($queue_name);
+  var_dump($queue);
+  return;
 
   /** @var \Psr\Log\LoggerInterface $logger */
   $logger = \Drupal::service('logger.channel.rabbitmq');
