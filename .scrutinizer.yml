@@ -74,6 +74,7 @@ checks:
 
 filter:
     excluded_paths:
+      - src/Tests
 coding_style:
     php:
         indentation:
