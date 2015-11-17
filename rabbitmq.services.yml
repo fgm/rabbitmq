@@ -11,3 +11,7 @@ services:
   logger.channel.rabbitmq:
     parent: 'logger.channel_base'
     arguments: ['rabbitmq']
+
+  logger.channel.rabbitmq-drush:
+    parent: 'logger.channel_base'
+    arguments: ['rabbitmq-drush']

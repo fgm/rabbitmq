@@ -123,9 +123,9 @@ class Queue extends QueueBase implements ReliableQueueInterface {
       'data' => unserialize($msg->body),
       'expire' => time() + $lease_time,
     ];
-    $this->logger->info('Item :id claimed from @queue', [
+    $this->logger->info('Item @id claimed from @queue', [
       'channel' => static::LOGGER_CHANNEL,
-      ':id' => $item->id,
+      '@id' => $item->id,
       '@queue' => $this->name,
     ]);
 
@@ -139,9 +139,9 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    *   An item returned by DrupalQueueInterface::claimItem().
    */
   public function deleteItem($item) {
-    $this->logger->info('Item :id acknowledged from @queue', [
+    $this->logger->info('Item @id acknowledged from @queue', [
       'channel' => static::LOGGER_CHANNEL,
-      ':id' => $item->id,
+      '@id' => $item->id,
       '@queue' => $this->name,
     ]);
 
