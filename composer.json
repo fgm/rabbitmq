@@ -1,0 +1,11 @@
+{
+  "name": "drupal/rabbitmq",
+  "type": "drupal-module",
+  "description": "RabbitMQ Integration for Drupal.",
+  "homepage": "http://drupal.org/project/rabbitmq",
+  "license": "GPL-2.0+",
+  "require": {
+    "videlalvaro/php-amqplib": "^2.6"
+  },
+  "minimum-stability": "dev"
+}
