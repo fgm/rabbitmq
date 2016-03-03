@@ -63,7 +63,8 @@ abstract class QueueBase {
    * @param \Psr\Log\LoggerInterface $logger
    *   The logger service.
    */
-  public function __construct($name, Connection $connection, ModuleHandlerInterface $modules, LoggerInterface $logger) {
+  public function __construct($name, Connection $connection,
+    ModuleHandlerInterface $modules, LoggerInterface $logger) {
     $this->name = $name;
 
     $this->connection = $connection;
