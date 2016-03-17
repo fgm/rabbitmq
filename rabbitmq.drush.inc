@@ -29,7 +29,8 @@ function drush_rabbitmq_test_producer() {
     Connection::DEFAULT_HOST,
     Connection::DEFAULT_PORT,
     Connection::DEFAULT_USER,
-    Connection::DEFAULT_PASS);
+    Connection::DEFAULT_PASS
+  );
   $channel = $connection->channel();
   $routing_key = $queue_name = 'hello';
   $channel->queue_declare($queue_name, FALSE, FALSE, FALSE, FALSE);
@@ -48,7 +49,8 @@ function drush_rabbitmq_test_consumer() {
     Connection::DEFAULT_HOST,
     Connection::DEFAULT_PORT,
     Connection::DEFAULT_USER,
-    Connection::DEFAULT_PASS);
+    Connection::DEFAULT_PASS
+  );
   $channel = $connection->channel();
   $queue_name = 'hello';
   $channel->queue_declare($queue_name, FALSE, FALSE, FALSE, FALSE);
