@@ -16,6 +16,7 @@ use Psr\Log\LoggerInterface;
  * Class QueueBase.
  */
 abstract class QueueBase {
+  
   const LOGGER_CHANNEL = 'rabbitmq';
 
   /**
