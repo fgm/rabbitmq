@@ -24,6 +24,7 @@ use Psr\Log\LoggerInterface;
  * @package Drupal\rabbitmq\Queue
  */
 class QueueFactory {
+
   const SERVICE_NAME = 'queue.rabbitmq';
   const DEFAULT_QUEUE_NAME = 'default';
 
