@@ -1,0 +1,8 @@
+services:
+  rabbitmq_example_event_subscriber:
+    class: Drupal\rabbitmq\rabbitmq_example\EventSubscriber\RabbitmqSubscriber
+    tags:
+      - {name: event_subscriber}
+  rabbitmq.connection.factory:
+    class: '\Drupal\rabbitmq\Connection'
+    arguments: ['@settings', '@logger.channel.rabbitmq']
