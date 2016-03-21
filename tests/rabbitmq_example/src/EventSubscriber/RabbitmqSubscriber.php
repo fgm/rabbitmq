@@ -1,13 +1,18 @@
 <?php
 
-namespace Drupal\rabbitmq\rabbitmq_example\EventSubscriber;
+/**
+ * @file
+ * Drupal\cr_rabbitmq\EventSubscriber\RabbitmqSubscriber.
+ */
+
+namespace Drupal\cr_rabbitmq\EventSubscriber;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
-use PhpAmqpLib\Message\AMQPMessage;
-use Drupal\rabbitmq\Queue\Queue;
 
+/**
+ * Defines a queue.
+ */
 class RabbitmqSubscriber implements EventSubscriberInterface {
 
   /**
@@ -33,7 +38,7 @@ class RabbitmqSubscriber implements EventSubscriberInterface {
    * Launch a rabbit.
    */
   public function rabbitLauncher() {
-    $name = 'cr';
+    $name = 'example_queue';
     $this->queueFactory = \Drupal::service('queue');
     $this->queue = $this->queueFactory->get($name);
     $this->connectionFactory = \Drupal::service('rabbitmq.connection.factory');
@@ -50,8 +55,9 @@ class RabbitmqSubscriber implements EventSubscriberInterface {
   /**
    * {@inheritdoc}
    */
-  static function getSubscribedEvents() {
+  public static function getSubscribedEvents() {
     $events[KernelEvents::REQUEST][] = array('rabbitLauncher');
     return $events;
   }
+
 }
