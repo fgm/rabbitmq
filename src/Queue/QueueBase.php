@@ -119,7 +119,7 @@ abstract class QueueBase {
 
     // Allow modules to override queue settings.
     if (isset($queue_info[$this->name])) {
-      $queue_options += $queue_info[$this->name];
+      $queue_options = $queue_info[$this->name];
     }
 
     $queue_options += $options;
