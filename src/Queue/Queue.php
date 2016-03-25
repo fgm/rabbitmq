@@ -49,20 +49,19 @@ class Queue extends QueueBase implements ReliableQueueInterface {
   public function createItem($data) {
     $logger_args = [
       'channel' => static::LOGGER_CHANNEL,
-      '@queue' => $this->name,
+      '%queue' => $this->name,
     ];
 
     try {
       $channel = $this->getChannel();
       // Data must be a string.
       $item = new AMQPMessage(serialize($data), ['delivery_mode' => 2]);
-
       $channel->basic_publish($item, '', $this->name);
-      $this->logger->info('Item sent to @queue', $logger_args);
+      $this->logger->info('Item sent to queue %queue', $logger_args);
       $result = TRUE;
     }
     catch (\Exception $e) {
-      $this->logger->error('Item failed being send to @queue', $logger_args);
+      $this->logger->error('Failed to send item to queue %queue: @message', $logger_args + array('@message' => $e->getMessage()));
       $result = FALSE;
     }
 
