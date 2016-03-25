@@ -16,6 +16,7 @@ use Psr\Log\LoggerInterface;
  * Class QueueBase.
  */
 abstract class QueueBase {
+
   const LOGGER_CHANNEL = 'rabbitmq';
 
   /**
@@ -52,6 +53,11 @@ abstract class QueueBase {
   protected $name;
 
   /**
+   * The queue options.
+   */
+  protected $options;
+
+  /**
    * Constructor.
    *
    * @param string $name
@@ -65,11 +71,37 @@ abstract class QueueBase {
    */
   public function __construct($name, Connection $connection,
     ModuleHandlerInterface $modules, LoggerInterface $logger) {
-    $this->name = $name;
+    // Check our active storage to find the full config
+    $config = \Drupal::config('rabbitmq.config');
+    $queues = $config->get('queues');
 
+    if (!$queues && !isset($queues[$name])) {
+      $logger->error('Cannot find queue information in active storage %yml for queue %name', array('%yml' => 'rabbitmq.queues', '%name' => $name));
+      // We should probably throw an error instead?
+      return;
+    }
+
+    $this->options = $queues[$name];
+    $this->name = $name;
     $this->connection = $connection;
     $this->logger = $logger;
     $this->modules = $modules;
+
+    // Declare any exchanges required
+    $exchanges = $config->get('exchanges');
+    if ($exchanges) {
+      foreach ($exchanges as $name => $exchange) {
+        $this->getChannel()->exchange_declare(
+          $name, 
+          $exchange['type'],
+          $exchange['passive'],
+          $exchange['durable'],
+          $exchange['auto_delete'],
+          $exchange['internal'],
+          $exchange['nowait']
+        );            
+      }
+    }
   }
 
   /**
@@ -101,33 +133,23 @@ abstract class QueueBase {
    * @return mixed|null
    *   Not strongly specified by php-amqplib.
    */
-  protected function getQueue(AMQPChannel $channel, array $options = []) {
-    $queue_options = [
-      'passive' => FALSE,
-      // Whether the queue is persistent or not. A durable queue is slower but
-      // can survive if RabbitMQ fails.
-      'durable' => TRUE,
-      'exclusive' => FALSE,
-      'auto_delete' => FALSE,
-      'nowait' => 'FALSE',
-      'arguments' => NULL,
-      'ticket' => NULL,
-    ];
+  protected function getQueue(AMQPChannel $channel, array $options = []) {    
+    // Add the queue name to the options
+    $this->options['name'] = $this->name;
 
-    $queue_info = $this->modules->invokeAll('rabbitmq_queue_info');
+    // Declare the queue
+    $channel->queue_declare(
+      $this->name,
+      $this->options['passive'],
+      $this->options['durable'],
+      $this->options['exclusive'],
+      $this->options['auto_delete']
+    );
 
-    // Allow modules to override queue settings.
-    if (isset($queue_info[$this->name])) {
-      $queue_options += $queue_info[$this->name];
+    // Bind the queue to an exchange if defined
+    if (!empty($this->options['bindings'])) {
+      $this->channel->queue_bind($this->name, $this->options['bindings']['exchange'], $this->options['bindings']['routing_key']);
     }
-
-    $queue_options += $options;
-    // The name option cannot be overridden.
-    $queue_options['name'] = $this->name;
-
-    return $channel->queue_declare($this->name,
-      $queue_options['passive'], $queue_options['durable'],
-      $queue_options['exclusive'], $queue_options['auto_delete']);
   }
 
 }
