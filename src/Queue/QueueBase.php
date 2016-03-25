@@ -71,34 +71,32 @@ abstract class QueueBase {
    */
   public function __construct($name, Connection $connection,
     ModuleHandlerInterface $modules, LoggerInterface $logger) {
-    // Check our active storage to find the full config
+    $this->options = ['name' => $name];
+
+    // Check our active storage to find the the queue config
     $config = \Drupal::config('rabbitmq.config');
     $queues = $config->get('queues');
-
-    if (!$queues && !isset($queues[$name])) {
-      $logger->error('Cannot find queue information in active storage %yml for queue %name', array('%yml' => 'rabbitmq.queues', '%name' => $name));
-      // We should probably throw an error instead?
-      return;
+    if ($queues && isset($queues[$name])) {
+      $this->options += $queues[$name];
     }
 
-    $this->options = $queues[$name];
     $this->name = $name;
     $this->connection = $connection;
     $this->logger = $logger;
     $this->modules = $modules;
 
-    // Declare any exchanges required
+    // Declare any exchanges required if configured
     $exchanges = $config->get('exchanges');
     if ($exchanges) {
       foreach ($exchanges as $name => $exchange) {
         $this->getChannel()->exchange_declare(
           $name, 
-          $exchange['type'],
-          $exchange['passive'],
-          $exchange['durable'],
-          $exchange['auto_delete'],
-          $exchange['internal'],
-          $exchange['nowait']
+          isset($exchange['type']) ? $exchange['type'] : 'direct',
+          isset($exchange['passive']) ? $exchange['passive'] : FALSE,
+          isset($exchange['durable']) ? $exchange['durable'] : TRUE,
+          isset($exchange['auto_delete']) ? $exchange['auto_delete'] : FALSE,
+          isset($exchange['internal']) ? $exchange['internal'] : FALSE,
+          isset($exchange['nowait']) ? $exchange['nowait'] : FALSE
         );            
       }
     }
@@ -134,16 +132,16 @@ abstract class QueueBase {
    *   Not strongly specified by php-amqplib.
    */
   protected function getQueue(AMQPChannel $channel, array $options = []) {    
-    // Add the queue name to the options
-    $this->options['name'] = $this->name;
-
     // Declare the queue
     $channel->queue_declare(
       $this->name,
-      $this->options['passive'],
-      $this->options['durable'],
-      $this->options['exclusive'],
-      $this->options['auto_delete']
+      isset($this->options['passive']) ? $this->options['passive'] : false,
+      isset($this->options['durable']) ? $this->options['durable'] : true,
+      isset($this->options['exclusive']) ? $this->options['exclusive'] : false,
+      isset($this->options['auto_delete']) ? $this->options['auto_delete'] : true,
+      isset($this->options['nowait']) ? $this->options['nowait'] : false,
+      isset($this->options['arguments']) ? $this->options['arguments'] : null,
+      isset($this->options['ticket']) ? $this->options['ticket'] : null
     );
 
     // Bind the queue to an exchange if defined
