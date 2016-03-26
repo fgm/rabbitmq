@@ -133,7 +133,7 @@ abstract class QueueBase {
    */
   protected function getQueue(AMQPChannel $channel, array $options = []) {    
     // Declare the queue
-    $channel->queue_declare(
+    $queue = $channel->queue_declare(
       $this->name,
       isset($this->options['passive']) ? $this->options['passive'] : false,
       isset($this->options['durable']) ? $this->options['durable'] : true,
@@ -145,12 +145,14 @@ abstract class QueueBase {
     );
 
     // Bind the queue to an exchange if defined
-    if (!empty($this->options['routing_keys'])) {
+    if ($queue && !empty($this->options['routing_keys'])) {
       foreach ($this->options['routing_keys'] as $routing_key) {
         list($exchange, $key) = explode('.', $routing_key);
         $this->channel->queue_bind($this->name, $exchange, $key);       
       }
     }
+
+    return $queue;
   }
 
 }
