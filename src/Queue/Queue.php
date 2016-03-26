@@ -57,16 +57,13 @@ class Queue extends QueueBase implements ReliableQueueInterface {
       // Data must be a string.
       $item = new AMQPMessage(serialize($data), ['delivery_mode' => 2]);
       
-      // Set exchange, or leave empty if no exchange is used
+      // Default exchange and routing keys
       $exchange = '';
-      if (isset($this->options['bindings']['exchange'])) {
-        $exchange = $this->options['bindings']['exchange'];
-      }
-
-      // Set the routing key, defaults to the queue name
       $routing_key = $this->name;
-      if (isset($this->options['bindings']['routing_key'])) {
-        $routing_key = $this->options['bindings']['routing_key'];
+
+      // Fetch exchange and routing key if defined, only consider the first routing key for now
+      if (isset($this->options['routing_keys'][0])) {
+        list($exchange, $routing_key) = explode('.', $this->options['routing_keys'][0]);
       }
 
       $channel->basic_publish($item, $exchange, $routing_key);

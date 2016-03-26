@@ -145,8 +145,11 @@ abstract class QueueBase {
     );
 
     // Bind the queue to an exchange if defined
-    if (!empty($this->options['bindings'])) {
-      $this->channel->queue_bind($this->name, $this->options['bindings']['exchange'], $this->options['bindings']['routing_key']);
+    if (!empty($this->options['routing_keys'])) {
+      foreach ($this->options['routing_keys'] as $routing_key) {
+        list($exchange, $key) = explode('.', $routing_key);
+        $this->channel->queue_bind($this->name, $exchange, $key);       
+      }
     }
   }
 
