@@ -1,5 +1,5 @@
 exchanges:
-  default:
+  exchange1:
     type: 'direct'
     passive: false
     durable: true
@@ -8,14 +8,14 @@ exchanges:
     nowait: false
 
 queues:
-  rabbitmq_example:
+  queue1:
     passive: false
     durable: false
     exclusive: false
     auto_delete: true
     nowait: false
     routing_keys:
-      - 'default.rabbitmq_example'
+      - 'exchange1.queue1'
   queue2:
     passive: false
     durable: true
@@ -23,4 +23,4 @@ queues:
     auto_delete: true
     nowait: false
     routing_keys:
-      - 'default.route2'
+      - 'exchange1.route2'

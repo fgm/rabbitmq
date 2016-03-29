@@ -50,7 +50,7 @@ class EsuForm extends FormBase {
     drupal_set_message($this->t('Your email address is @email', ['@email' => $form_state->getValue('email')]));
 
     $queue_factory = \Drupal::service('queue');
-    $queue = $queue_factory->get('rabbitmq_example');
+    $queue = $queue_factory->get('queue1');
     $item = $form_state->getValue('email');
     $queue->createItem($item);
   }
