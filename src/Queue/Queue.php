@@ -56,7 +56,17 @@ class Queue extends QueueBase implements ReliableQueueInterface {
       $channel = $this->getChannel();
       // Data must be a string.
       $item = new AMQPMessage(serialize($data), ['delivery_mode' => 2]);
-      $channel->basic_publish($item, '', $this->name);
+      
+      // Default exchange and routing keys
+      $exchange = '';
+      $routing_key = $this->name;
+
+      // Fetch exchange and routing key if defined, only consider the first routing key for now
+      if (isset($this->options['routing_keys'][0])) {
+        list($exchange, $routing_key) = explode('.', $this->options['routing_keys'][0]);
+      }
+
+      $channel->basic_publish($item, $exchange, $routing_key);
       $this->logger->info('Item sent to queue %queue', $logger_args);
       $result = TRUE;
     }
