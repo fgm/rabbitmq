@@ -23,4 +23,4 @@ queues:
     auto_delete: true
     nowait: false
     routing_keys:
-      - 'exchange1.route2'
+      - 'exchange1.queue2'

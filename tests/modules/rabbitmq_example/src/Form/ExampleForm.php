@@ -13,7 +13,7 @@ use Drupal\Core\Form\FormStateInterface;
 /**
  * Contribute form.
  */
-class EsuForm extends FormBase {
+class ExampleForm extends FormBase {
 
   /**
    * {@inheritdoc}
@@ -28,7 +28,7 @@ class EsuForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form['email'] = [
       '#type' => 'email',
-      '#title' => $this->t('Your .com email address.'),
+      '#title' => $this->t('Send a text message to the queue.'),
     ];
     $form['show'] = [
       '#type' => 'submit',
