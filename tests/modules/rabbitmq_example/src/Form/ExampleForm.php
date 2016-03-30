@@ -28,7 +28,7 @@ class ExampleForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $form['email'] = [
       '#type' => 'email',
-      '#title' => $this->t('Send a text message to the queue.'),
+      '#title' => $this->t('Send an email address to the queue.'),
     ];
     $form['show'] = [
       '#type' => 'submit',
