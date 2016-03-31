@@ -1,7 +1,7 @@
 RabbitMQ Integration
 ====================
 
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/FGM/rabbitmq/badges/quality-score.png?b=8.x-1.x)](https://scrutinizer-ci.com/g/FGM/rabbitmq/?branch=8.x-1.x)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/comicrelief/rabbitmq/badges/quality-score.png?b=8.x-1.x)](https://scrutinizer-ci.com/g/comicrelief/rabbitmq/?branch=8.x-1.x)
 
 Requirements
 ------------
