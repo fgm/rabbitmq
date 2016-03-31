@@ -14,6 +14,10 @@ Requirements
       the file, then save it.
     * update your `vendor` directory by typing `composer update`.
 
+Example module
+--------------
+
+To test RabbitMQ from your Drupal site, enable the `rabbitmq_example` module and following the instructions from the README.
 
 Installation
 ------------
