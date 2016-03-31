@@ -57,7 +57,7 @@ class ExampleForm extends FormBase {
 
     // Send some feedback.
     drupal_set_message(
-      $this->t('You sent to the queue: @email', [
+      $this->t('You sent the following data to queue: @email', [
         '@email' => $form_state->getValue('email'),
       ])
     );
