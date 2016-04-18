@@ -10,7 +10,7 @@ Requirements
 * Drupal 8.0.0-RC4 or more recent must be configured with `php-amqplib`  
     * go to the root directory of your site
     * edit `composer.json` (not `core/composer.json`)
-    * insert `"videlalvaro/php-amqplib": "^2.6"` in the `require` section of 
+    * insert `"pphp-amqplib/php-amqplib": "^2.6"` in the `require` section of 
       the file, then save it.
     * update your `vendor` directory by typing `composer update`.
 
