@@ -49,5 +49,5 @@ Installation
 Customization
 -------------
 
-Modules may override queue or exchange defaults built in the custom module by implementing
+Modules may override queue or exchange defaults built in a custom module by implementing
 `config/install//rabbitmq.config.yml`. See `src/Queue/QueueBase.php` for details.
