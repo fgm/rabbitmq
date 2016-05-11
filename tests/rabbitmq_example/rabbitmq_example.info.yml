@@ -1,0 +1,9 @@
+name: example rabbitmq
+type: module
+hidden: TRUE
+description: Example of RabbitMQ Integration for Drupal
+core: 8.x
+package: Performance and scalability
+
+dependencies:
+  - rabbitmq

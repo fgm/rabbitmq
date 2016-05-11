@@ -1,0 +1,7 @@
+esu_form:
+  path: '/rabbitmq_example/esu'
+  defaults:
+    _form: '\Drupal\rabbitmq_example\Form\EsuForm'
+    _title: 'Email Sign Up Form'
+  requirements:
+    _permission: 'access simple page'
