@@ -3,12 +3,6 @@
 /**
  * @file
  * Contains the RabbitMQ QueueFactory.
- *
- * @author: Frédéric G. MARAND <fgm@osinet.fr>
- *
- * @copyright (c) 2015 Ouest Systèmes Informatiques (OSInet).
- *
- * @license General Public License version 2 or later
  */
 
 namespace Drupal\rabbitmq\Queue;
@@ -24,6 +18,7 @@ use Psr\Log\LoggerInterface;
  * @package Drupal\rabbitmq\Queue
  */
 class QueueFactory {
+
   const SERVICE_NAME = 'queue.rabbitmq';
   const DEFAULT_QUEUE_NAME = 'default';
 
