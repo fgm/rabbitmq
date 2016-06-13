@@ -64,7 +64,7 @@ class Connection {
       'Could not find php-amqplib. See the rabbitmq/README.md file for details.'
     );
 
-    // @TODO investigate why is going on here
+    // @TODO investigate what is going on here
     if (empty($settings->host)) {
       $this->settings = Settings::get('rabbitmq_credentials');
     }
