@@ -86,9 +86,10 @@ class Connection {
         'vhost' => '/',
       ];
 
-//      $credentials = $this->settings->get('rabbitmq.credentials', $default_credentials);
+      // $credentials = $this->settings->get('rabbitmq.credentials', $default_credentials);
       $credentials = empty($this->settings['host']) ? $default_credentials : $this->settings;
-      $connection = new AMQPStreamConnection($credentials['host'],
+      $connection = new AMQPStreamConnection(
+        $credentials['host'],
         $credentials['port'], $credentials['username'],
         $credentials['password'], $credentials['vhost']
       );
