@@ -45,6 +45,18 @@ class Connection {
    */
   protected static $connection;
 
+ /**
+   * Constructor.
+   *
+   * @param \Drupal\Core\Site\Settings $settings
+   *   The settings service.
+   */
+  public function __construct(Settings $settings) {
+    // Cannot continue if the library wasn't loaded.
+    assert('class_exists("\PhpAmqpLib\Connection\AMQPStreamConnection")',
+      'Could not find php-amqplib. See the rabbitmq/README.md file for details.'
+    );
+  }
   /**
    * Get a configured connection to RabbitMQ.
    */
