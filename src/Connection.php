@@ -57,6 +57,7 @@ class Connection {
       'Could not find php-amqplib. See the rabbitmq/README.md file for details.'
     );
   }
+  
   /**
    * Get a configured connection to RabbitMQ.
    */
