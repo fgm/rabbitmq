@@ -46,34 +46,6 @@ class Connection {
   protected static $connection;
 
   /**
-   * The settings service.
-   *
-   * @var \Drupal\Core\Site\Settings
-   */
-  protected $settings;
-
-  /**
-   * Constructor.
-   *
-   * @param \Drupal\Core\Site\Settings $settings
-   *   The settings service.
-   */
-  public function __construct(Settings $settings) {
-    // Cannot continue if the library wasn't loaded.
-    assert('class_exists("\PhpAmqpLib\Connection\AMQPStreamConnection")',
-      'Could not find php-amqplib. See the rabbitmq/README.md file for details.'
-    );
-
-    // @TODO investigate why is going on here
-    if (empty($settings->host)) {
-      $this->settings = Settings::get('rabbitmq_credentials');
-    }
-    else {
-      $this->settings = $settings;
-    }
-  }
-
-  /**
    * Get a configured connection to RabbitMQ.
    */
   public function getConnection() {
@@ -86,7 +58,9 @@ class Connection {
         'vhost' => '/',
       ];
 
-      $credentials = empty($this->settings['host']) ? $default_credentials : $this->settings;
+      $config_credentials = Settings::get('rabbitmq_credentials');
+      $credentials = !empty($config_credentials) ? $config_credentials : $default_credentials;
+      
       $connection = new AMQPStreamConnection(
         $credentials['host'],
         $credentials['port'], $credentials['username'],
