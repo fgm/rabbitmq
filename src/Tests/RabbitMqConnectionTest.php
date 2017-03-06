@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains RabbitMqConnectionTest.
- */
-
 namespace Drupal\rabbitmq\Tests;
 
 use Drupal\rabbitmq\Queue\QueueFactory;

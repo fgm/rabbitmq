@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\rabbitmq_example\Form\ContributeForm.
- */
-
 namespace Drupal\rabbitmq_example\Form;
 
 use Drupal\Core\Form\FormBase;

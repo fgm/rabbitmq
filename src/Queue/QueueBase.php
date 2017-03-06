@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains RabbitMQ QueueBase.
- */
-
 namespace Drupal\rabbitmq\Queue;
 
 use Drupal\Core\Extension\ModuleHandlerInterface;

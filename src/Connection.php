@@ -1,8 +1,5 @@
 <?php
-/**
- * @file
- * Contains RabbitMQConnection.
- */
+
 namespace Drupal\rabbitmq;
 use Drupal\Core\Site\Settings;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
