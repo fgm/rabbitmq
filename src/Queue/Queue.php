@@ -125,7 +125,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
 
     $item = (object) [
       'id' => $msg->delivery_info['delivery_tag'],
-      'data' => unserialize($msg->body),
+      'data' => json_decode($msg->body),
       'expire' => time() + $lease_time,
     ];
     $this->logger->info('Item @id claimed from @queue', [
