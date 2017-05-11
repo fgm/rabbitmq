@@ -127,7 +127,7 @@ function drush_rabbitmq_worker($queue_name) {
       // Build the item to pass to the queue worker.
       $item = (object) [
         'id' => $msg->delivery_info['delivery_tag'],
-        'data' => unserialize($msg->body),
+        'data' => json_decode($msg->body),
       ];
 
       // Call the queue worker.
