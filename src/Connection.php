@@ -1,8 +1,15 @@
 <?php
 
+/**
+ * @file
+ * Contains RabbitMQConnection.
+ */
 namespace Drupal\rabbitmq;
+
 use Drupal\Core\Site\Settings;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Connection\AMQPSSLConnection;
+
 /**
  * RabbitMQ connection class.
  *
@@ -70,11 +77,27 @@ class Connection {
        $config_credentials = Settings::get('rabbitmq_credentials');
        $credentials = !empty($config_credentials) ? $config_credentials : $default_credentials;
 
-       $connection = new AMQPStreamConnection(
-         $credentials['host'],
-         $credentials['port'], $credentials['username'],
-         $credentials['password'], $credentials['vhost']
-       );
+       if ($credentials['ssl'])
+       {
+         $connection = new AMQPSSLConnection(
+           $credentials['host'],
+           $credentials['port'],
+           $credentials['username'],
+           $credentials['password'],
+           $credentials['vhost'],
+           $credentials['ssl'],
+           $credentials['options']
+         );
+       }
+       else {
+         $connection = new AMQPStreamConnection(
+           $credentials['host'],
+           $credentials['port'],
+           $credentials['username'],
+           $credentials['password'],
+           $credentials['vhost']
+         );
+       }
        self::$connection = $connection;
      }
      return self::$connection;
