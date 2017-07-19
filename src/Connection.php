@@ -1,9 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains RabbitMQConnection.
- */
 namespace Drupal\rabbitmq;
 
 use Drupal\Core\Site\Settings;
@@ -49,6 +45,7 @@ class Connection {
    * @var \Drupal\Core\Site\Settings
    */
   protected $settings;
+
   /**
    * Constructor.
    *
@@ -62,44 +59,44 @@ class Connection {
     );
     $this->settings = $settings;
   }
+
   /**
    * Get a configured connection to RabbitMQ.
    */
-   public function getConnection() {
-     if (!self::$connection) {
-       $default_credentials = [
-         'host' => static::DEFAULT_SERVER_ALIAS,
-         'port' => static::DEFAULT_PORT,
-         'username' => static::DEFAULT_USER,
-         'password' => static::DEFAULT_PASS,
-         'vhost' => '/',
-       ];
-       $config_credentials = Settings::get('rabbitmq_credentials');
-       $credentials = !empty($config_credentials) ? $config_credentials : $default_credentials;
+  public function getConnection() {
+    if (!self::$connection) {
+      $default_credentials = [
+        'host' => static::DEFAULT_SERVER_ALIAS,
+        'port' => static::DEFAULT_PORT,
+        'username' => static::DEFAULT_USER,
+        'password' => static::DEFAULT_PASS,
+        'vhost' => '/',
+      ];
+      $config_credentials = Settings::get('rabbitmq_credentials');
+      $credentials = !empty($config_credentials) ? $config_credentials : $default_credentials;
 
-       if ($credentials['ssl'])
-       {
-         $connection = new AMQPSSLConnection(
-           $credentials['host'],
-           $credentials['port'],
-           $credentials['username'],
-           $credentials['password'],
-           $credentials['vhost'],
-           $credentials['ssl'],
-           $credentials['options']
-         );
-       }
-       else {
-         $connection = new AMQPStreamConnection(
-           $credentials['host'],
-           $credentials['port'],
-           $credentials['username'],
-           $credentials['password'],
-           $credentials['vhost']
-         );
-       }
-       self::$connection = $connection;
-     }
-     return self::$connection;
-   }
+      if ($credentials['ssl']) {
+        $connection = new AMQPSSLConnection(
+          $credentials['host'],
+          $credentials['port'],
+          $credentials['username'],
+          $credentials['password'],
+          $credentials['vhost'],
+          $credentials['ssl'],
+          $credentials['options']
+        );
+      }
+      else {
+        $connection = new AMQPStreamConnection(
+          $credentials['host'],
+          $credentials['port'],
+          $credentials['username'],
+          $credentials['password'],
+          $credentials['vhost']
+        );
+      }
+      self::$connection = $connection;
+    }
+    return self::$connection;
+  }
 }
