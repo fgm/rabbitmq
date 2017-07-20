@@ -51,3 +51,26 @@ Customization
 
 Modules may override queue or exchange defaults built in a custom module by implementing
 `config/install//rabbitmq.config.yml`. See `src/Queue/QueueBase.php` for details.
+
+
+SSL
+-------
+it's similar to the normal one but you need to add 2 extra array
+This is an example of how should looks like the `settings.php`:
+```
+$settings['rabbitmq_credentials'] = [
+  'host' => 'host',
+'port' => 5672,
+'vhost' => '/',
+'username' => 'guest',
+'password' => 'guest',
+'ssl' => [
+  'verify_peer_name' => false,
+  'verify_peer' => false,
+  'local_pk' => '~/.ssh/id_rsa',
+],
+  'options' => [
+  'connection_timeout'    => 20,
+  'read_write_timeout'    => 20
+]];
+```
