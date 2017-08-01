@@ -55,8 +55,11 @@ Modules may override queue or exchange defaults built in a custom module by impl
 
 SSL
 -------
-it's similar to the normal one but you need to add 2 extra array
-This is an example of how should looks like the `settings.php`:
+
+It is similar to the normal connection but you need to add 2 extra array keys.
+
+This is an example of how the `settings.php` should look like:
+
 ```
 $settings['rabbitmq_credentials'] = [
   'host' => 'host',
@@ -70,7 +73,8 @@ $settings['rabbitmq_credentials'] = [
     'local_pk' => '~/.ssh/id_rsa',
   ],
   'options' => [
-  'connection_timeout' => 20,
-  'read_write_timeout' => 20,
-]];
+    'connection_timeout' => 20,
+    'read_write_timeout' => 20,
+  ],
+];
 ```
