@@ -81,6 +81,8 @@ coding_style:
             general:
                 size: 2
         spaces:
+            around_operators:
+                concatenation: true
             before_parentheses:
                 closure_definition: true
         upper_lower_casing:
