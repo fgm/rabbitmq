@@ -55,7 +55,9 @@ class Queue extends QueueBase implements ReliableQueueInterface {
       $result = TRUE;
     }
     catch (\Exception $e) {
-      $this->logger->error('Failed to send item to queue %queue: @message', $logger_args + ['@message' => $e->getMessage()]);
+      $this->logger->error('Failed to send item to queue %queue: @message', $logger_args + [
+        '@message' => $e->getMessage(),
+      ]);
       $result = FALSE;
     }
 
@@ -79,7 +81,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
   public function numberOfItems() {
     // Retrieve information about the queue without modifying it.
     $queue_options = ['passive' => TRUE];
-    unset($this->queue);
+    $this->queue = NULL;
     $jobs = array_slice($this->getQueue($this->getChannel(), $queue_options), 1, 1);
     return empty($jobs) ? 0 : $jobs[0];
   }
@@ -104,7 +106,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    *   problem.
    */
   public function claimItem($lease_time = 3600) {
-    $this->getChannel()->basic_qos(NULL, 1, NULL);
+    $this->getChannel()->basic_qos(NULL, 1, FALSE);
     if (!$msg = $this->getChannel()->basic_get($this->name)) {
       return FALSE;
     }

@@ -52,6 +52,7 @@ checks:
         one_class_per_file: true
         optional_parameters_at_the_end: true
         param_doc_comment_if_not_inferrable: true
+        parameters_in_camelcaps: true
         parameter_doc_comments: true
         php5_style_constructor: true
         phpunit_assertions: true

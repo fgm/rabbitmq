@@ -12,11 +12,12 @@ $settings['rabbitmq_credentials'] = [
   'vhost' => '/',
   'username' => 'guest',
   'password' => 'guest',
-//  'ssl' => [
-//    'verify_peer_name' => false,
-//    'verify_peer' => false,
-//    'local_pk' => '~/.ssh/id_rsa',
-//  ],
+  // Comment or remove the lines below if you are not using AMQP over SSL.
+  'ssl' => [
+    'verify_peer_name' => false,
+    'verify_peer' => false,
+    'local_pk' => '~/.ssh/id_rsa',
+  ],
   'options' => [
     'connection_timeout' => 5,
     'read_write_timeout' => 5,

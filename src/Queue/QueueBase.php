@@ -60,7 +60,7 @@ abstract class QueueBase {
   /**
    * A queue array: [writer, item count, consumer count].
    *
-   * @var array
+   * @var array|null
    */
   protected $queue;
 

@@ -7,6 +7,7 @@
 
 use Drupal\Core\Queue\QueueWorkerInterface;
 use Drupal\rabbitmq\ConnectionFactory;
+use Drupal\rabbitmq\Queue\Queue;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Symfony\Component\Yaml\Yaml;
@@ -87,6 +88,12 @@ function drush_rabbitmq_queue_info($queue_name = NULL) {
 
 /**
  * Command callback: Create a queue worker.
+ *
+ * @param string $queue_name
+ *   The name of the queue/ID of the queue worker plugin to wait on.
+ *
+ * @return bool
+ *   Did the command succeed ?
  */
 function drush_rabbitmq_worker($queue_name) {
   /* @var \Drupal\Core\Queue\QueueWorkerManager $worker_manager */
@@ -113,7 +120,7 @@ function drush_rabbitmq_worker($queue_name) {
   $queue_factory = \Drupal::service('queue');
   /* @var \Drupal\rabbitmq\Queue\queue $queue */
   $queue = $queue_factory->get($queue_name);
-  assert('$queue instanceof \Drupal\rabbitmq\Queue\Queue');
+  assert($queue instanceof Queue);
 
   /** @var \Psr\Log\LoggerInterface $logger */
   $logger = \Drupal::service('logger.channel.rabbitmq-drush');
@@ -146,7 +153,7 @@ function drush_rabbitmq_worker($queue_name) {
     }
   };
 
-  $queue->getChannel()->basic_qos(NULL, 1, NULL);
+  $queue->getChannel()->basic_qos(NULL, 1, FALSE);
   $queue->getChannel()->basic_consume($queue_name, '', FALSE, FALSE, FALSE, FALSE, $callback);
 
   if ($max_iterations > 0) {
@@ -187,4 +194,6 @@ function drush_rabbitmq_worker($queue_name) {
       }
     }
   }
+
+  return TRUE;
 }
