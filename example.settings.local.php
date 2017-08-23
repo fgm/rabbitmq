@@ -9,9 +9,18 @@
 $settings['rabbitmq_credentials'] = [
   'host' => 'localhost',
   'port' => 5672,
+  'vhost' => '/',
   'username' => 'guest',
   'password' => 'guest',
-  'vhost' => '/'
+//  'ssl' => [
+//    'verify_peer_name' => false,
+//    'verify_peer' => false,
+//    'local_pk' => '~/.ssh/id_rsa',
+//  ],
+  'options' => [
+    'connection_timeout' => 5,
+    'read_write_timeout' => 5,
+  ],
 ];
 
 $settings['queue_default'] = 'queue.rabbitmq';

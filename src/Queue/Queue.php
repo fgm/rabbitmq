@@ -11,23 +11,11 @@ use PhpAmqpLib\Message\AMQPMessage;
 class Queue extends QueueBase implements ReliableQueueInterface {
 
   /**
-   * The logger service.
-   *
-   * @var \Psr\Log\LoggerInterface
-   */
-  protected $logger;
-
-  /**
    * Array of message objects claimed from the queue.
-   */
-  protected $messages = array();
-
-  /**
-   * The queue name.
    *
-   * @var string
+   * @var array
    */
-  protected $name;
+  protected $messages = [];
 
   /**
    * Add a queue item and store it directly to the queue.
@@ -67,7 +55,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
       $result = TRUE;
     }
     catch (\Exception $e) {
-      $this->logger->error('Failed to send item to queue %queue: @message', $logger_args + array('@message' => $e->getMessage()));
+      $this->logger->error('Failed to send item to queue %queue: @message', $logger_args + ['@message' => $e->getMessage()]);
       $result = FALSE;
     }
 
@@ -91,6 +79,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
   public function numberOfItems() {
     // Retrieve information about the queue without modifying it.
     $queue_options = ['passive' => TRUE];
+    unset($this->queue);
     $jobs = array_slice($this->getQueue($this->getChannel(), $queue_options), 1, 1);
     return empty($jobs) ? 0 : $jobs[0];
   }
@@ -170,6 +159,13 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    *   acknowledgement to the server which would remove the item from the queue.
    */
   public function releaseItem($item) {
+    /** @var \PhpAmqpLib\Message\AMQPMessage $message */
+    $message = $this->messages[$item->id];
+
+    /* @var \PhpAmqpLib\Channel\AMQPChannel $channel */
+    $channel = $message->delivery_info['channel'];
+
+    $channel->basic_nack($message->delivery_info['delivery_tag'], FALSE, TRUE);
     unset($this->messages[$item->id]);
     return TRUE;
   }
@@ -193,7 +189,9 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    * Delete a queue and every item in the queue.
    */
   public function deleteQueue() {
-    $this->getChannel()->queue_delete($this->name);
+    $channel = $this->getChannel();
+    $channel->queue_purge($this->name);
+    $channel->queue_delete($this->name);
   }
 
 }

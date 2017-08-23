@@ -2,8 +2,9 @@
 
 namespace Drupal\rabbitmq\Queue;
 
+use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\Extension\ModuleHandlerInterface;
-use Drupal\rabbitmq\Connection;
+use Drupal\rabbitmq\ConnectionFactory;
 use PhpAmqpLib\Channel\AMQPChannel;
 use Psr\Log\LoggerInterface;
 
@@ -24,7 +25,7 @@ abstract class QueueBase {
   /**
    * The RabbitMQ connection service.
    *
-   * @var \Drupal\rabbitmq\Connection
+   * @var \PhpAmqpLib\Connection\AbstractConnection
    */
   protected $connection;
 
@@ -44,31 +45,48 @@ abstract class QueueBase {
 
   /**
    * The name of the queue.
+   *
+   * @var string
    */
   protected $name;
 
   /**
    * The queue options.
+   *
+   * @var array
    */
   protected $options;
+
+  /**
+   * A queue array: [writer, item count, consumer count].
+   *
+   * @var array
+   */
+  protected $queue;
 
   /**
    * Constructor.
    *
    * @param string $name
    *   The name of the queue to work with: an arbitrary string.
-   * @param \Drupal\rabbitmq\Connection $connection
-   *   The RabbitMQ connection service.
+   * @param \Drupal\rabbitmq\ConnectionFactory $connectionFactory
+   *   The RabbitMQ connection factory.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $modules
    *   The module handler service.
    * @param \Psr\Log\LoggerInterface $logger
    *   The logger service.
+   * @param \Drupal\Core\Config\ImmutableConfig $moduleConfig
+   *   The config.factory service.
    */
-  public function __construct($name, Connection $connection,
-    ModuleHandlerInterface $modules, LoggerInterface $logger) {
+  public function __construct(
+    string $name,
+    ConnectionFactory $connectionFactory,
+    ModuleHandlerInterface $modules,
+    LoggerInterface $logger,
+    ImmutableConfig $moduleConfig
+  ) {
     // Check our active storage to find the the queue config.
-    $config = \Drupal::config('rabbitmq.config');
-    $queues = $config->get('queues');
+    $queues = $moduleConfig->get('queues');
 
     $this->options = ['name' => $name];
     if (isset($queues[$name])) {
@@ -76,21 +94,21 @@ abstract class QueueBase {
     }
 
     $this->name = $name;
-    $this->connection = $connection;
+    $this->connection = $connectionFactory->getConnection();
     $this->logger = $logger;
     $this->modules = $modules;
     // Declare any exchanges required if configured.
-    $exchanges = $config->get('exchanges');
+    $exchanges = $moduleConfig->get('exchanges');
     if ($exchanges) {
-      foreach ($exchanges as $name => $exchange) {
-        $this->connection->getConnection()->channel()->exchange_declare(
-          $name,
-          isset($exchange['type']) ? $exchange['type'] : 'direct',
-          isset($exchange['passive']) ? $exchange['passive'] : FALSE,
-          isset($exchange['durable']) ? $exchange['durable'] : TRUE,
-          isset($exchange['auto_delete']) ? $exchange['auto_delete'] : FALSE,
-          isset($exchange['internal']) ? $exchange['internal'] : FALSE,
-          isset($exchange['nowait']) ? $exchange['nowait'] : FALSE
+      foreach ($exchanges as $exchangeName => $exchange) {
+        $this->connection->channel()->exchange_declare(
+          $exchangeName,
+          $exchange['type'] ?? 'direct',
+          $exchange['passive'] ?? FALSE,
+          $exchange['durable'] ?? TRUE,
+          $exchange['auto_delete'] ?? FALSE,
+          $exchange['internal'] ?? FALSE,
+          $exchange['nowait'] ?? FALSE
         );
       }
     }
@@ -103,14 +121,15 @@ abstract class QueueBase {
    *   The queue channel.
    */
   public function getChannel() {
-    if ($this->channel) {
-      return $this->channel;
+    if (!$this->channel) {
+      $this->channel = $this->connection
+        ->getConnection()
+        ->channel();
+
+      // Initialize a queue on the channel.
+      $this->getQueue($this->channel);
     }
 
-    $this->channel = $this->connection->getConnection()->channel();
-
-    // Initialize a queue on the channel.
-    $this->getQueue($this->channel);
     return $this->channel;
   }
 
@@ -126,27 +145,29 @@ abstract class QueueBase {
    *   Not strongly specified by php-amqplib.
    */
   protected function getQueue(AMQPChannel $channel, array $options = []) {
-    // Declare the queue.
-    $queue = $channel->queue_declare(
-      $this->name,
-      isset($this->options['passive']) ? $this->options['passive'] : FALSE,
-      isset($this->options['durable']) ? $this->options['durable'] : TRUE,
-      isset($this->options['exclusive']) ? $this->options['exclusive'] : FALSE,
-      isset($this->options['auto_delete']) ? $this->options['auto_delete'] : TRUE,
-      isset($this->options['nowait']) ? $this->options['nowait'] : FALSE,
-      isset($this->options['arguments']) ? $this->options['arguments'] : NULL,
-      isset($this->options['ticket']) ? $this->options['ticket'] : NULL
-    );
+    if (!isset($this->queue)) {
+      // Declare the queue.
+      $this->queue = $channel->queue_declare(
+        $this->name,
+        $this->options['passive'] ?? FALSE,
+        $this->options['durable'] ?? TRUE,
+        $this->options['exclusive'] ?? FALSE,
+        $this->options['auto_delete'] ?? TRUE,
+        $this->options['nowait'] ?? FALSE,
+        $this->options['arguments'] ?? NULL,
+        $this->options['ticket'] ?? NULL
+      );
 
-    // Bind the queue to an exchange if defined.
-    if ($queue && !empty($this->options['routing_keys'])) {
-      foreach ($this->options['routing_keys'] as $routing_key) {
-        list($exchange, $key) = explode('.', $routing_key);
-        $this->channel->queue_bind($this->name, $exchange, $key);
+      // Bind the queue to an exchange if defined.
+      if ($this->queue && !empty($this->options['routing_keys'])) {
+        foreach ($this->options['routing_keys'] as $routing_key) {
+          list($exchange, $key) = explode('.', $routing_key);
+          $this->channel->queue_bind($this->name, $exchange, $key);
+        }
       }
     }
 
-    return $queue;
+    return $this->queue;
   }
 
 }

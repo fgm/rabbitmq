@@ -2,8 +2,9 @@
 
 namespace Drupal\rabbitmq\Queue;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
-use Drupal\rabbitmq\Connection;
+use Drupal\rabbitmq\ConnectionFactory;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -15,11 +16,19 @@ class QueueFactory {
 
   const SERVICE_NAME = 'queue.rabbitmq';
   const DEFAULT_QUEUE_NAME = 'default';
+  const MODULE_CONFIG = 'rabbitmq.config';
+
+  /**
+   * The config.factory service.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
 
   /**
    * The server factory service.
    *
-   * @var \Drupal\rabbitmq\Connection
+   * @var \Drupal\rabbitmq\ConnectionFactory
    */
   protected $connectionFactory;
 
@@ -40,15 +49,22 @@ class QueueFactory {
   /**
    * Constructor.
    *
-   * @param \Drupal\rabbitmq\Connection $connection_factory
+   * @param \Drupal\rabbitmq\ConnectionFactory $connection_factory
    *   The connection factory service.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $modules
    *   The module handler service.
    * @param \Psr\Log\LoggerInterface $logger
    *   The logger service for the RabbitMQ channel.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The config.factory service.
    */
-  public function __construct(Connection $connection_factory,
-    ModuleHandlerInterface $modules, LoggerInterface $logger) {
+  public function __construct(
+    ConnectionFactory $connection_factory,
+    ModuleHandlerInterface $modules,
+    LoggerInterface $logger,
+    ConfigFactoryInterface $configFactory
+  ) {
+    $this->configFactory = $configFactory;
     $this->connectionFactory = $connection_factory;
     $this->logger = $logger;
     $this->modules = $modules;
@@ -64,7 +80,8 @@ class QueueFactory {
    *   The Queue object
    */
   public function get($name) {
-    $queue = new Queue($name, $this->connectionFactory, $this->modules, $this->logger);
+    $moduleConfig = $this->configFactory->get(static::MODULE_CONFIG);
+    $queue = new Queue($name, $this->connectionFactory, $this->modules, $this->logger, $moduleConfig);
     return $queue;
   }
 

@@ -3,7 +3,6 @@
 namespace Drupal\rabbitmq\Tests;
 
 use Drupal\rabbitmq\Queue\Queue;
-use Drupal\rabbitmq\Queue\QueueFactory;
 
 /**
  * Class RabbitMqQueueTest.
@@ -15,7 +14,7 @@ class RabbitMqQueueTest extends RabbitMqTestBase {
   /**
    * The default queue, handled by Beanstalkd.
    *
-   * @var \Drupal\beanstalkd\Queue\BeanstalkdQueue
+   * @var \Drupal\rabbitmq\Queue\Queue
    */
   protected $queue;
 
@@ -32,39 +31,41 @@ class RabbitMqQueueTest extends RabbitMqTestBase {
   public function setUp() {
     parent::setUp();
 
-    $queue_factory = $this->container->get('queue');
-    $this->queueFactory = $queue_factory;
-    $this->queue = $this->queueFactory->get(QueueFactory::DEFAULT_QUEUE_NAME);
+    $this->queueFactory = $this->container->get('queue');
+    $this->queue = $this->queueFactory->get($this->queueName);
     $this->assertTrue($this->queue instanceof Queue, 'Queue API settings point to RabbitMQ');
+    $this->queue->createQueue();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function tearDown() {
+    $this->queue->deleteQueue();
+    parent::tearDown();
   }
 
   /**
    * Test queue registration.
    */
   public function testQueueCycle() {
-    list($server, $name,) = $this->initChannel();
-
-    $expected = $this->queue->getName();
-    $actual = $name;
-    $this->assertEquals($expected, $actual, 'Queue name matches default');
-
     $data = 'foo';
     $this->queue->createItem($data);
+    $actual = $this->queue->numberOfItems();
+    $expected = 1;
+    $this->assertEquals($expected, $actual, 'Queue contains someting before deletion');
 
     $this->queue->deleteQueue();
-    $actual = $this->queue->numberOfItems();
     $expected = 0;
+    $actual = $this->queue->numberOfItems();
     $this->assertEquals($expected, $actual, 'Queue no longer contains anything after deletion');
-
-    $this->cleanUp($server, $name);
   }
 
   /**
    * Test the queue item lifecycle.
    */
   public function testItemCycle() {
-    list($server, $name, $count) = $this->initChannel();
-
+    $count = 0;
     $data = 'foo';
     $this->queue->createItem($data);
 
@@ -74,7 +75,6 @@ class RabbitMqQueueTest extends RabbitMqTestBase {
 
     $item = $this->queue->claimItem();
     $this->assertTrue(is_object($item), 'Claiming returns an item');
-    $this->assertTrue($item instanceof BeanstalkdQueueItem, 'Claiming returns a correctly typed item');
 
     $expected = $data;
     $actual = $item->data;
@@ -89,12 +89,13 @@ class RabbitMqQueueTest extends RabbitMqTestBase {
     $expected = $count + 1;
     $this->assertEquals($expected, $actual, 'Releasing an item increases the item count.');
 
+    $item = $this->queue->claimItem();
+    $this->assertTrue(is_object($item), 'Claiming returns an item');
+
     $this->queue->deleteItem($item);
     $actual = $this->queue->numberOfItems();
     $expected = $count;
     $this->assertEquals($expected, $actual, 'Deleting an item reduces the item count.');
-
-    $this->cleanUp($server, $name);
   }
 
 }

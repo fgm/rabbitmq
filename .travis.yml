@@ -67,8 +67,8 @@ before_script:
   - mkdir -p modules/contrib
   - mv ../FGM/rabbitmq modules/contrib
 
-  # install Drush in the project
-  - composer require -v "drush/drush"
+  # install Drush and PHP-AMQPlib in the project
+  - composer require -v "drush/drush" "php-amqplib/php-amqplib:^2.6"
 
   # create new site, stubbing sendmail path with true to prevent delivery errors and manually resolving drush path
   - mysql -e 'create database travis_ci_rabbitmq'
@@ -77,7 +77,7 @@ before_script:
   - chmod 644 sites/default/settings.php
 
   # Define RabbitMQ settings
-  - tail --lines=+8 modules/contrib/rabbitmq/example.settings.local.php >> sites/default/settings.php sites/default/settings.php
+  - tail --lines=+8 modules/contrib/rabbitmq/example.settings.local.php >> sites/default/settings.php
 
   # reference and enable RabbitMQ module in build site.
   #- ln -s $(readlink -e $(cd -)) drupal-8.3.x-dev/modules/custom/rabbitmq

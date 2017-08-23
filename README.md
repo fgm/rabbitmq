@@ -7,10 +7,10 @@ Requirements
 ------------
 
 * RabbitMQ server needs to be installed and configured.
-* Drupal 8.0.0-RC4 or more recent must be configured with `php-amqplib`  
+* Drupal 8.3.0 or more recent must be configured with `php-amqplib`  
     * go to the root directory of your site
     * edit `composer.json` (not `core/composer.json`)
-    * insert `"videlalvaro/php-amqplib": "^2.6"` in the `require` section of 
+    * insert `"php-amqplib/php-amqplib": "^2.6"` in the `require` section of 
       the file, then save it.
     * update your `vendor` directory by typing `composer update`.
 
@@ -60,17 +60,17 @@ This is an example of how should looks like the `settings.php`:
 ```
 $settings['rabbitmq_credentials'] = [
   'host' => 'host',
-'port' => 5672,
-'vhost' => '/',
-'username' => 'guest',
-'password' => 'guest',
-'ssl' => [
-  'verify_peer_name' => false,
-  'verify_peer' => false,
-  'local_pk' => '~/.ssh/id_rsa',
-],
+  'port' => 5672,
+  'vhost' => '/',
+  'username' => 'guest',
+  'password' => 'guest',
+  'ssl' => [
+    'verify_peer_name' => false,
+    'verify_peer' => false,
+    'local_pk' => '~/.ssh/id_rsa',
+  ],
   'options' => [
-  'connection_timeout'    => 20,
-  'read_write_timeout'    => 20
+  'connection_timeout' => 20,
+  'read_write_timeout' => 20,
 ]];
 ```

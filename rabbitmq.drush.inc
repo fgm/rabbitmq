@@ -6,7 +6,7 @@
  */
 
 use Drupal\Core\Queue\QueueWorkerInterface;
-use Drupal\rabbitmq\Connection;
+use Drupal\rabbitmq\ConnectionFactory;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Symfony\Component\Yaml\Yaml;
@@ -26,10 +26,10 @@ function rabbitmq_drush_command() {
  */
 function drush_rabbitmq_test_producer() {
   $connection = new AMQPStreamConnection(
-    Connection::DEFAULT_HOST,
-    Connection::DEFAULT_PORT,
-    Connection::DEFAULT_USER,
-    Connection::DEFAULT_PASS
+    ConnectionFactory::DEFAULT_HOST,
+    ConnectionFactory::DEFAULT_PORT,
+    ConnectionFactory::DEFAULT_USER,
+    ConnectionFactory::DEFAULT_PASS
   );
   $channel = $connection->channel();
   $routing_key = $queue_name = 'hello';
@@ -46,17 +46,17 @@ function drush_rabbitmq_test_producer() {
  */
 function drush_rabbitmq_test_consumer() {
   $connection = new AMQPStreamConnection(
-    Connection::DEFAULT_HOST,
-    Connection::DEFAULT_PORT,
-    Connection::DEFAULT_USER,
-    Connection::DEFAULT_PASS
+    ConnectionFactory::DEFAULT_HOST,
+    ConnectionFactory::DEFAULT_PORT,
+    ConnectionFactory::DEFAULT_USER,
+    ConnectionFactory::DEFAULT_PASS
   );
   $channel = $connection->channel();
   $queue_name = 'hello';
   $channel->queue_declare($queue_name, FALSE, FALSE, FALSE, FALSE);
   echo ' [*] Waiting for messages. To exit press CTRL+C', "\n";
 
-  $callback = function($msg) {
+  $callback = function ($msg) {
     echo " [x] Received ", $msg->body, "\n";
   };
 
