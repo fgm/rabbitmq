@@ -1,10 +1,7 @@
 language: php
 
 php:
-  - '7.0'
   - '7.1'
-  # - '7.2'
-  # - hhvm
 
 services:
   - rabbitmq
@@ -12,9 +9,7 @@ services:
 
 matrix:
   fast_finish: true
-  allow_failures:
-    - php:
-      - hhvm
+
 sudo: true
 
 addons:
@@ -88,4 +83,9 @@ before_script:
   # - drush runserver 127.0.0.1:8080 &
   #- until netstat -an 2>/dev/null | grep '8080.*LISTEN'; do true; done
 
-script: SIMPLETEST_DB=mysql://root:@127.0.0.1/travis_ci_rabbitmq vendor/bin/phpunit -c core/phpunit.xml.dist modules/contrib/rabbitmq
+script: SIMPLETEST_DB=mysql://root:@127.0.0.1/travis_ci_rabbitmq vendor/bin/phpunit --coverage-clover modules/contrib/rabbitmq/coverage.clover -c modules/contrib/rabbitmq/travis.phpunit.xml modules/contrib/rabbitmq
+
+after_script:
+  - cd modules/contrib/rabbitmq
+  - wget https://scrutinizer-ci.com/ocular.phar
+  - php ocular.phar code-coverage:upload --format=php-clover coverage.clover

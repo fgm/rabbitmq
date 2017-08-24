@@ -1,3 +1,7 @@
+build:
+   tests:
+       override:
+           - /bin/true
 checks:
     php:
         avoid_fixme_comments: true
@@ -91,3 +95,7 @@ coding_style:
                 general: lower
             constants:
                 true_false_null: upper
+tools:
+    external_code_coverage:
+        timeout: 600
+
