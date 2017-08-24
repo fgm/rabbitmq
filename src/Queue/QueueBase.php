@@ -150,22 +150,23 @@ abstract class QueueBase {
    *   - Number of items
    */
   protected function getQueue(AMQPChannel $channel, array $options = []) {
+    $options = array_merge($this->options, $options);
     if (!isset($this->queue)) {
       // Declare the queue.
       $this->queue = $channel->queue_declare(
         $this->name,
-        $this->options['passive'] ?? FALSE,
-        $this->options['durable'] ?? TRUE,
-        $this->options['exclusive'] ?? FALSE,
-        $this->options['auto_delete'] ?? TRUE,
-        $this->options['nowait'] ?? FALSE,
-        $this->options['arguments'] ?? NULL,
-        $this->options['ticket'] ?? NULL
+        $options['passive'] ?? FALSE,
+        $options['durable'] ?? TRUE,
+        $options['exclusive'] ?? FALSE,
+        $options['auto_delete'] ?? TRUE,
+        $options['nowait'] ?? FALSE,
+        $options['arguments'] ?? NULL,
+        $options['ticket'] ?? NULL
       );
 
       // Bind the queue to an exchange if defined.
-      if ($this->queue && !empty($this->options['routing_keys'])) {
-        foreach ($this->options['routing_keys'] as $routing_key) {
+      if ($this->queue && !empty($options['routing_keys'])) {
+        foreach ($options['routing_keys'] as $routing_key) {
           list($exchange, $key) = explode('.', $routing_key);
           $this->channel->queue_bind($this->name, $exchange, $key);
         }
