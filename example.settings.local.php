@@ -14,8 +14,8 @@ $settings['rabbitmq_credentials'] = [
   'password' => 'guest',
   // Comment or remove the lines below if you are not using AMQP over SSL.
   'ssl' => [
-    'verify_peer_name' => false,
-    'verify_peer' => false,
+    'verify_peer_name' => FALSE,
+    'verify_peer' => FALSE,
     'local_pk' => '~/.ssh/id_rsa',
   ],
   'options' => [

@@ -18,16 +18,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
   protected $messages = [];
 
   /**
-   * Add a queue item and store it directly to the queue.
-   *
-   * @param mixed $data
-   *   Arbitrary data to be associated with the new task in the queue.
-   *
-   * @return bool
-   *   TRUE if the item was successfully created and was (best effort) added
-   *   to the queue, otherwise FALSE. We don't guarantee the item was
-   *   committed to disk etc, but as far as we know, the item is now in the
-   *   queue.
+   * {@inheritdoc}
    */
   public function createItem($data) {
     $logger_args = [

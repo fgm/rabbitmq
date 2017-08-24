@@ -8,7 +8,7 @@ use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 
 /**
- * Class BeanstalkdTestBase is a base class for Beanstalkd tests.
+ * Class RabbitMqTestBase is a base class for RabbitMQ tests.
  */
 abstract class RabbitMqTestBase extends KernelTestBase {
   const MODULE = 'rabbitmq';
@@ -36,12 +36,16 @@ abstract class RabbitMqTestBase extends KernelTestBase {
    */
   protected $routingKey;
 
-  /*
-   * Uncomment this line to be able to step into the code with a debugger.
-   *
-   * @var bool
+  /**
+   * {@inheritdoc}
    */
-  /* protected $runTestInSeparateProcess = FALSE; */
+  public function __construct($name = NULL, array $data = array(), $dataName = '') {
+    // Set to FALSE to enable step debugging: with the default TRUE value,
+    // PHPUnit eval's the code, disabling debugging.
+    $this->setRunTestInSeparateProcess(TRUE);
+
+    parent::__construct($name, $data, $dataName);
+  }
 
   /**
    * {@inheritdoc}
