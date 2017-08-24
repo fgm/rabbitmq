@@ -176,4 +176,16 @@ abstract class QueueBase {
     return $this->queue;
   }
 
+  /**
+   * Shutdown.
+   */
+  public function shutdown() {
+    if ($this->channel) {
+      $this->channel->close();
+    }
+    if ($this->connection) {
+      $this->connection->close();
+    }
+  }
+
 }

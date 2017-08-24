@@ -12,7 +12,7 @@ use Drupal\rabbitmq\Queue\Queue;
 class RabbitMqQueueTest extends RabbitMqTestBase {
 
   /**
-   * The default queue, handled by Beanstalkd.
+   * The default queue, handled by RabbitMq.
    *
    * @var \Drupal\rabbitmq\Queue\Queue
    */
@@ -33,7 +33,7 @@ class RabbitMqQueueTest extends RabbitMqTestBase {
 
     $this->queueFactory = $this->container->get('queue');
     $this->queue = $this->queueFactory->get($this->queueName);
-    $this->assertTrue($this->queue instanceof Queue, 'Queue API settings point to RabbitMQ');
+    $this->assertInstanceOf(Queue::class, $this->queue, 'Queue API settings point to RabbitMQ');
     $this->queue->createQueue();
   }
 
@@ -53,7 +53,7 @@ class RabbitMqQueueTest extends RabbitMqTestBase {
     $this->queue->createItem($data);
     $actual = $this->queue->numberOfItems();
     $expected = 1;
-    $this->assertEquals($expected, $actual, 'Queue contains someting before deletion');
+    $this->assertEquals($expected, $actual, 'Queue contains something before deletion');
 
     $this->queue->deleteQueue();
     $expected = 0;
