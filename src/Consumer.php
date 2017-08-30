@@ -13,6 +13,7 @@ use Drupal\rabbitmq\Exception\OutOfRangeException;
 use Drupal\rabbitmq\Exception\RuntimeException;
 use Drupal\rabbitmq\Queue\Queue;
 use PhpAmqpLib\Channel\AMQPChannel;
+use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPOutOfRangeException;
 use PhpAmqpLib\Exception\AMQPRuntimeException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
@@ -34,6 +35,13 @@ class Consumer {
     self::OPTION_MEMORY_LIMIT => -1,
     self::OPTION_TIMEOUT => 120,
   ];
+
+  /**
+   * Continue listening ?
+   *
+   * @var bool
+   */
+  protected $continueListening = FALSE;
 
   /**
    * The rabbitmq logger channel.
@@ -158,6 +166,17 @@ class Consumer {
   }
 
   /**
+   * Signal handler.
+   *
+   * @see \Drupal\rabbitmq\Consumer::consume()
+   */
+  public function onTimeout() {
+    echo "Timeout reached\n";
+    $this->logger->info('Timeout reached');
+    $this->stopListening();
+  }
+
+  /**
    * Main logic: consume the specified queue.
    *
    * @param string $queueName
@@ -166,7 +185,7 @@ class Consumer {
    * @throws \Exception
    */
   public function consume(string $queueName) {
-    $continueListening = TRUE;
+    $this->startListening();
     $worker = $this->getWorker($queueName);
     // Allow obtaining a decoder from the worker to have a sane default, while
     // being able to override it on service instantation.
@@ -174,7 +193,89 @@ class Consumer {
       $this->setDecoder($worker->getDecoder());
     }
 
-    $callback = function (AMQPMessage $msg) use ($worker, $queueName) {
+    /* @var \Drupal\rabbitmq\Queue\queue $queue */
+    $queue = $this->queueFactory->get($queueName);
+    assert($queue instanceof Queue);
+
+    $channel = $this->getChannel($queue);
+    assert($channel instanceof AMQPChannel);
+
+    $maxIterations = $this->getOption(self::OPTION_MAX_ITERATIONS);
+    $memoryLimit = $this->getOption(self::OPTION_MEMORY_LIMIT);
+    $timeout = $this->getOption(self::OPTION_TIMEOUT);
+    if ($timeout) {
+      pcntl_signal(SIGALRM, [$this, 'onTimeout']);
+    }
+    $callback = $this->getCallback($worker, $queueName, $timeout);
+
+    while ($this->continueListening) {
+      try {
+        $channel->basic_qos(NULL, 1, NULL);
+        $channel->basic_consume($queueName, '', FALSE, FALSE, FALSE, FALSE, $callback);
+
+        // Begin listening for messages to process.
+        $iteration = 0;
+        while (count($channel->callbacks) && $this->continueListening) {
+          if ($timeout) {
+            pcntl_alarm($timeout);
+          }
+          $channel->wait(NULL, FALSE, $timeout);
+          if ($timeout) {
+            pcntl_alarm(0);
+          }
+
+          // Break on memory_limit reached.
+          if ($this->hitMemoryLimit($memoryLimit)) {
+            $this->stopListening();
+            break;
+          }
+
+          // Break on max_iterations reached.
+          $iteration++;
+          if ($this->hitIterationsLimit($maxIterations, $iteration)) {
+            $this->stopListening();
+          }
+        }
+        $this->stopListening();
+      }
+      catch (AMQPIOWaitException $e) {
+        echo "Caught AMQPIOWaitException\n";
+        $this->stopListening();
+        $channel->close();
+      }
+      catch (AMQPTimeoutException $e) {
+        $this->startListening();
+      }
+      catch (\Exception $e) {
+        throw new \Exception($e);
+      }
+    }
+  }
+
+  /**
+   * Provide a message callback for events.
+   *
+   * @param \Drupal\Core\Queue\QueueWorkerInterface $worker
+   *   The worker plugin.
+   * @param string $queueName
+   *   The queue name.
+   * @param int $timeout
+   *   The queue wait timeout. Since it is only for queue wait, not worker wait,
+   *   it has to be reset before starting work, and reinitialized when ending
+   *   work.
+   *
+   * @return \Closure
+   *   The callback.
+   */
+  protected function getCallback(
+    QueueWorkerInterface $worker,
+    string $queueName,
+    int $timeout = 0
+  ): \Closure {
+    $callback = function (AMQPMessage $msg) use ($worker, $queueName, $timeout) {
+      if ($timeout) {
+        pcntl_alarm(0);
+      }
       $this->logger->info('(Drush) Received queued message: @id', [
         '@id' => $msg->delivery_info['delivery_tag'],
       ]);
@@ -201,49 +302,12 @@ class Consumer {
         $msg->delivery_info['channel']->basic_reject($msg->delivery_info['delivery_tag'],
           TRUE);
       }
+      if ($timeout) {
+        pcntl_alarm($timeout);
+      }
     };
 
-    /* @var \Drupal\rabbitmq\Queue\queue $queue */
-    $queue = $this->queueFactory->get($queueName);
-    assert($queue instanceof Queue);
-
-    $channel = $this->getChannel($queue);
-    assert($channel instanceof AMQPChannel);
-
-    $maxIterations = $this->getOption(self::OPTION_MAX_ITERATIONS);
-    $memoryLimit = $this->getOption(self::OPTION_MEMORY_LIMIT);
-    $timeout = $this->getOption(self::OPTION_TIMEOUT);
-
-    while ($continueListening) {
-      try {
-        $channel->basic_qos(NULL, 1, NULL);
-        $channel->basic_consume($queueName, '', FALSE, FALSE, FALSE, FALSE, $callback);
-
-        // Begin listening for messages to process.
-        $iteration = 0;
-        while (count($channel->callbacks)) {
-          $channel->wait(NULL, FALSE, $timeout);
-
-          // Break on memory_limit reached.
-          if ($this->hitMemoryLimit($memoryLimit)) {
-            break;
-          }
-
-          // Break on max_iterations reached.
-          $iteration++;
-          if ($this->hitIterationsLimit($maxIterations, $iteration)) {
-            break;
-          }
-        }
-        $continueListening = FALSE;
-      }
-      catch (AMQPTimeoutException $e) {
-        $continueListening = TRUE;
-      }
-      catch (\Exception $e) {
-        throw new \Exception($e);
-      }
-    }
+    return $callback;
   }
 
   /**
@@ -373,6 +437,20 @@ class Consumer {
    */
   public function setOptionGetter(callable $optionGetter) {
     $this->optionGetter = $optionGetter;
+  }
+
+  /**
+   * Mark listening as active.
+   */
+  public function startListening() {
+    $this->continueListening = TRUE;
+  }
+
+  /**
+   * Mark listening as inactive.
+   */
+  public function stopListening() {
+    $this->continueListening = FALSE;
   }
 
 }
