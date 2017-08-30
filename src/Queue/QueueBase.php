@@ -6,10 +6,16 @@ use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\rabbitmq\ConnectionFactory;
 use PhpAmqpLib\Channel\AMQPChannel;
+use PhpAmqpLib\Exception\AMQPProtocolChannelException;
 use Psr\Log\LoggerInterface;
 
 /**
- * Class QueueBase.
+ * Low-level Queue API implementation for RabbitMQ on top of AMQPlib.
+ *
+ * This class contains the low-level properties and methods not exposed by
+ * the Queue API ReliableQueueInterface: those are implemented in Queue.php.
+ *
+ * @see \Drupal\rabbitmq\Queue\Queue
  */
 abstract class QueueBase {
 
@@ -146,26 +152,32 @@ abstract class QueueBase {
    * @return mixed|null
    *   Not strongly specified by php-amqplib. Expected to be a 3-item array:
    *   - ProtocolWriter
-   *   - Number of clients
    *   - Number of items
+   *   - Number of clients
    */
   protected function getQueue(AMQPChannel $channel, array $options = []) {
     if (!isset($this->queue)) {
       // Declare the queue.
-      $this->queue = $channel->queue_declare(
-        $this->name,
-        $this->options['passive'] ?? FALSE,
-        $this->options['durable'] ?? TRUE,
-        $this->options['exclusive'] ?? FALSE,
-        $this->options['auto_delete'] ?? TRUE,
-        $this->options['nowait'] ?? FALSE,
-        $this->options['arguments'] ?? NULL,
-        $this->options['ticket'] ?? NULL
-      );
+      $actualOptions = array_merge($this->options, $options);
+      try {
+        $this->queue = $channel->queue_declare(
+          $this->name,
+          $actualOptions['passive'] ?? FALSE,
+          $actualOptions['durable'] ?? TRUE,
+          $actualOptions['exclusive'] ?? FALSE,
+          $actualOptions['auto_delete'] ?? TRUE,
+          $actualOptions['nowait'] ?? FALSE,
+          $actualOptions['arguments'] ?? NULL,
+          $actualOptions['ticket'] ?? NULL
+        );
+      }
+      catch (AMQPProtocolChannelException $e) {
+        return NULL;
+      }
 
       // Bind the queue to an exchange if defined.
-      if ($this->queue && !empty($this->options['routing_keys'])) {
-        foreach ($this->options['routing_keys'] as $routing_key) {
+      if ($this->queue && !empty($actualOptions['routing_keys'])) {
+        foreach ($actualOptions['routing_keys'] as $routing_key) {
           list($exchange, $key) = explode('.', $routing_key);
           $this->channel->queue_bind($this->name, $exchange, $key);
         }
@@ -173,6 +185,18 @@ abstract class QueueBase {
     }
 
     return $this->queue;
+  }
+
+  /**
+   * Shutdown.
+   */
+  public function shutdown() {
+    if ($this->channel) {
+      $this->channel->close();
+    }
+    if ($this->connection) {
+      $this->connection->close();
+    }
   }
 
 }
