@@ -5,6 +5,7 @@ namespace Drupal\rabbitmq\Controller;
 use Drupal\Core\Site\Settings;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
+use Drupal\rabbitmq\Queue\Queue;
 use Drupal\rabbitmq\Queue\QueueFactory;
 use PhpAmqpLib\Connection\AbstractConnection;
 use Symfony\Component\Yaml\Yaml;
@@ -30,6 +31,18 @@ class ServerPropertiesController {
     catch (\ErrorException $e) {
       $build = [
         '#markup' => $this->t('<h2>Error</h2><p>Could not access the queue. Check the <a href=":url">status page</a>.</p>', [
+          ':url' => Url::fromRoute('system.status')->toString(),
+        ]),
+      ];
+      if (Settings::get('queue_default') == 'queue.rabbitmq') {
+        QueueFactory::overrideSettings();
+      }
+      return $build;
+    }
+
+    if (!$backend instanceof Queue) {
+      $build = [
+        '#markup' => $this->t('<h2>Error</h2><p>RabbitMQ queue is reachable, but its service is not configured. Check the <a href=":url">status page</a>.</p>', [
           ':url' => Url::fromRoute('system.status')->toString(),
         ]),
       ];
