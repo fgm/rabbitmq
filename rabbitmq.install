@@ -13,18 +13,34 @@ use Drupal\rabbitmq\Queue\QueueFactory;
 
 /**
  * Implements hook_requirements().
+ *
+ * @link https://www.drupal.org/node/2681929 @endlink
  */
 function rabbitmq_requirements($phase) {
+  // During the install phase, the autoloader cannot yet load module classes,
+  // so load them manually. Do not register them on the autoloader in case the
+  // install files.
+  if ($phase !== 'runtime') {
+    require_once __DIR__ . '/src/ConnectionFactory.php';
+    require_once __DIR__ . '/src/Queue/QueueBase.php';
+    require_once __DIR__ . '/src/Queue/Queue.php';
+    require_once __DIR__ . '/src/Queue/QueueFactory.php';
+  }
+
   $key = QueueBase::MODULE;
-  $url = Url::fromRoute('rabbitmq.properties')->toString();
   $req = [
     $key => [
       'title' => t('RabbitMQ'),
-      'description' => t('RabbitMQ connection information. See <a href=":link">RabbitMQ properties</a>.', [
-        ':link' => $url,
-      ]),
     ],
   ];
+
+  if ($phase === 'runtime') {
+    // Routes are not know during install.
+    $url = Url::fromRoute('rabbitmq.properties')->toString();
+    $req[$key]['description'] = t('RabbitMQ connection information. See <a href=":link">RabbitMQ properties</a>.', [
+      ':link' => $url,
+    ]);
+  }
 
   $credentials = Settings::get(ConnectionFactory::CREDENTIALS);
   if (empty($credentials)) {
@@ -33,24 +49,26 @@ function rabbitmq_requirements($phase) {
     return $req;
   };
 
-  /** @var \Drupal\rabbitmq\ConnectionFactory $factory */
-  $factory = \Drupal::service('rabbitmq.connection.factory');
-  try {
-    $factory->getConnection();
-  }
-  catch (Exception $e) {
-    $req[$key]['value'] = t('Could not connect to RabbitMQ: "@message".', [
-      '@message' => $e->getMessage(),
-    ]);
-    $req[$key]['severity'] = REQUIREMENT_ERROR;
-    // If RabbitMQ is set as the default queue service, remove it to avoid
-    // breakage in hook_requirements() implementations depending on that default
-    // queue, like update_requirements().
-    if (Settings::get('queue_default') == 'queue.rabbitmq') {
-      QueueFactory::overrideSettings();
-      $req[$key]['description'] = t('The default queue service pointing to queue.rabbitmq in settings has been reset to its default to avoid breaking requirements checks depending on the queue service, like update_requirements(), since the RabbitMQ queue is not actually available.');
+  // Module-defined services are not available during install.
+  if ($phase === 'runtime') {
+    $factory = \Drupal::service('rabbitmq.connection.factory');
+    try {
+      $factory->getConnection();
     }
-    return $req;
+    catch (Exception $e) {
+      $req[$key]['value'] = t('Could not connect to RabbitMQ: "@message".', [
+        '@message' => $e->getMessage(),
+      ]);
+      $req[$key]['severity'] = REQUIREMENT_ERROR;
+      // If RabbitMQ is set as the default queue service, remove it to avoid
+      // breakage in hook_requirements() implementations depending on that default
+      // queue, like update_requirements().
+      if (Settings::get('queue_default') == 'queue.rabbitmq') {
+        QueueFactory::overrideSettings();
+        $req[$key]['description'] = t('The default queue service pointing to queue.rabbitmq in settings has been reset to its default to avoid breaking requirements checks depending on the queue service, like update_requirements(), since the RabbitMQ queue is not actually available.');
+      }
+      return $req;
+    }
   }
 
   return $req;

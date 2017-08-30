@@ -10,8 +10,6 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Class RabbitMQ QueueFactory.
- *
- * @package Drupal\rabbitmq\Queue
  */
 class QueueFactory {
 
