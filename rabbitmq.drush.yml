@@ -3,17 +3,19 @@ commands:
     aliases: ['rqwk']
     arguments:
       worker: 'The name of the queue to process, also the name of the queue worker plugin.'
+    required-arguments: 1,
     description: 'Connect to RabbitMQ and wait for jobs to do'
     options:
       memory_limit: 'Set the max amount of memory the worker should occupy before exiting. Given in megabytes.'
       max_iterations: 'Number of iterations to process before exiting. If not present, exit criteria will not evaluate the amount of iterations processed.'
+      rabbitmq_timeout: 'Set the number of seconds before the script ends up.'
 
   rabbitmq-queue-info:
     aliases: ['rqqi']
     arguments:
       queue_name: 'The name of the queue to get information from'
     description: 'Return information about a queue'
-    required-arguments: true
+    required-arguments: 1
 
   rabbitmq-test-producer:
     aliases: ['rqtp']

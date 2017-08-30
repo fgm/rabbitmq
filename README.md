@@ -58,9 +58,9 @@ Modules may override queue or exchange defaults built in a custom module by impl
 SSL
 -------
 
-It is similar to the normal one, but you need to add 2 extra arrays. 
+It is similar to the normal connection array, but you need to add 2 extra arrays keys. 
 
-This is an example of how `settings.php` should looks like :
+This is an example of how `settings.php` should look like:
 
 ```
 $settings['rabbitmq_credentials'] = [

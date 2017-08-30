@@ -22,3 +22,10 @@ services:
   logger.channel.rabbitmq-drush:
     parent: 'logger.channel_base'
     arguments: ['rabbitmq-drush']
+
+  rabbitmq.consumer:
+    class: 'Drupal\rabbitmq\Consumer'
+    arguments:
+      - '@plugin.manager.queue_worker'
+      - '@queue'
+      - '@logger.channel.rabbitmq-drush'
