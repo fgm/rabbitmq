@@ -420,6 +420,18 @@ class Consumer {
   }
 
   /**
+   * Shutdown a queue.
+   *
+   * @param string $queueName
+   */
+  public function shutdownQueue(string $queueName) {
+    $queue = $this->queueFactory->get($queueName);
+    if ($queue instanceof Queue) {
+      $queue->shutdown();
+    }
+  }
+
+  /**
    * Register a decoder for message payloads.
    *
    * @param callable $decoder
