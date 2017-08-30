@@ -6,7 +6,12 @@ use Drupal\Core\Queue\ReliableQueueInterface;
 use PhpAmqpLib\Message\AMQPMessage;
 
 /**
- * RabbitMQ queue implementation.
+ * Queue API Backend implementation on top of AMQPlib.
+ *
+ * This class only contains the ReliableQueueInterface methods, no lower-level
+ * method specific to the implementation: those are in QueueBase.php.
+ *
+ * @see \Drupal\rabbitmq\Queue\QueueBase
  */
 class Queue extends QueueBase implements ReliableQueueInterface {
 
@@ -73,7 +78,8 @@ class Queue extends QueueBase implements ReliableQueueInterface {
     // Retrieve information about the queue without modifying it.
     $queue_options = ['passive' => TRUE];
     $this->queue = NULL;
-    $jobs = array_slice($this->getQueue($this->getChannel(), $queue_options), 1, 1);
+    $queue = $this->getQueue($this->getChannel(), $queue_options);
+    $jobs = $queue ? array_slice($queue, 1, 1) : [];
     return empty($jobs) ? 0 : $jobs[0];
   }
 
@@ -182,9 +188,13 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    * Delete a queue and every item in the queue.
    */
   public function deleteQueue() {
+    if (empty($this->queue)) {
+      return;
+    }
     $channel = $this->getChannel();
     $channel->queue_purge($this->name);
     $channel->queue_delete($this->name);
+    $this->queue = NULL;
   }
 
 }
