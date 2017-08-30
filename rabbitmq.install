@@ -1,0 +1,57 @@
+<?php
+
+/**
+ * @file
+ * Installer for the RabbitMQ module.
+ */
+
+use Drupal\Core\Site\Settings;
+use Drupal\Core\Url;
+use Drupal\rabbitmq\ConnectionFactory;
+use Drupal\rabbitmq\Queue\QueueBase;
+use Drupal\rabbitmq\Queue\QueueFactory;
+
+/**
+ * Implements hook_requirements().
+ */
+function rabbitmq_requirements($phase) {
+  $key = QueueBase::MODULE;
+  $url = Url::fromRoute('rabbitmq.properties')->toString();
+  $req = [
+    $key => [
+      'title' => t('RabbitMQ'),
+      'description' => t('RabbitMQ connection information. See <a href=":link">RabbitMQ properties</a>.', [
+        ':link' => $url,
+      ]),
+    ],
+  ];
+
+  $credentials = Settings::get(ConnectionFactory::CREDENTIALS);
+  if (empty($credentials)) {
+    $req[$key]['description'] = t('RabbitMQ credentials not found in settings.php');
+    $req[$key]['severity'] = REQUIREMENT_ERROR;
+    return $req;
+  };
+
+  /** @var \Drupal\rabbitmq\ConnectionFactory $factory */
+  $factory = \Drupal::service('rabbitmq.connection.factory');
+  try {
+    $factory->getConnection();
+  }
+  catch (Exception $e) {
+    $req[$key]['value'] = t('Could not connect to RabbitMQ: "@message".', [
+      '@message' => $e->getMessage(),
+    ]);
+    $req[$key]['severity'] = REQUIREMENT_ERROR;
+    // If RabbitMQ is set as the default queue service, remove it to avoid
+    // breakage in hook_requirements() implementations depending on that default
+    // queue, like update_requirements().
+    if (Settings::get('queue_default') == 'queue.rabbitmq') {
+      QueueFactory::overrideSettings();
+      $req[$key]['description'] = t('The default queue service pointing to queue.rabbitmq in settings has been reset to its default to avoid breaking requirements checks depending on the queue service, like update_requirements(), since the RabbitMQ queue is not actually available.');
+    }
+    return $req;
+  }
+
+  return $req;
+}

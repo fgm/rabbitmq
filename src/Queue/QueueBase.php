@@ -15,6 +15,8 @@ abstract class QueueBase {
 
   const LOGGER_CHANNEL = 'rabbitmq';
 
+  const MODULE = 'rabbitmq';
+
   /**
    * Object that holds a channel to RabbitMQ.
    *
@@ -142,7 +144,10 @@ abstract class QueueBase {
    *   Options overriding the queue defaults.
    *
    * @return mixed|null
-   *   Not strongly specified by php-amqplib.
+   *   Not strongly specified by php-amqplib. Expected to be a 3-item array:
+   *   - ProtocolWriter
+   *   - Number of clients
+   *   - Number of items
    */
   protected function getQueue(AMQPChannel $channel, array $options = []) {
     if (!isset($this->queue)) {

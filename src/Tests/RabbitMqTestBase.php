@@ -2,6 +2,7 @@
 
 namespace Drupal\rabbitmq\Tests;
 
+use Drupal\rabbitmq\Queue\QueueBase;
 use Drupal\rabbitmq\Queue\QueueFactory;
 use Drupal\KernelTests\KernelTestBase;
 use PhpAmqpLib\Channel\AMQPChannel;
@@ -13,7 +14,7 @@ use PhpAmqpLib\Connection\AMQPStreamConnection;
 abstract class RabbitMqTestBase extends KernelTestBase {
   const MODULE = 'rabbitmq';
 
-  public static $modules = ['system', 'rabbitmq'];
+  public static $modules = ['system', QueueBase::MODULE];
 
   /**
    * Server factory.
@@ -39,7 +40,7 @@ abstract class RabbitMqTestBase extends KernelTestBase {
   /**
    * {@inheritdoc}
    */
-  public function __construct($name = NULL, array $data = array(), $dataName = '') {
+  public function __construct($name = NULL, array $data = [], $dataName = '') {
     // Set to FALSE to enable step debugging: with the default TRUE value,
     // PHPUnit eval's the code, disabling debugging.
     $this->setRunTestInSeparateProcess(TRUE);
@@ -52,7 +53,7 @@ abstract class RabbitMqTestBase extends KernelTestBase {
    */
   public function setUp() {
     parent::setUp();
-    $this->installConfig(['rabbitmq']);
+    $this->installConfig([QueueBase::MODULE]);
     $time = $this->container->get('datetime.time')->getCurrentTime();
     $this->routingKey = $this->queueName = 'test-' . date('c', $time);
 

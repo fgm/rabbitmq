@@ -4,6 +4,7 @@ namespace Drupal\rabbitmq\Queue;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Site\Settings;
 use Drupal\rabbitmq\ConnectionFactory;
 use Psr\Log\LoggerInterface;
 
@@ -83,6 +84,20 @@ class QueueFactory {
     $moduleConfig = $this->configFactory->get(static::MODULE_CONFIG);
     $queue = new Queue($name, $this->connectionFactory, $this->modules, $this->logger, $moduleConfig);
     return $queue;
+  }
+
+  /**
+   * To limit breakage, reset unavailable queue.rabbitmq to queue.database.
+   */
+  public static function overrideSettings() {
+    // Regrettably, Settings can not be modified using the public core API.
+    $settings = Settings::getInstance();
+    $rc = new \ReflectionClass($settings);
+    $rp = $rc->getProperty('storage');
+    $rp->setAccessible(TRUE);
+    $storage = $rp->getValue($settings);
+    unset($storage['queue_default']);
+    $rp->setValue($settings, $storage);
   }
 
 }
