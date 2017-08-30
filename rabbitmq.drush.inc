@@ -122,6 +122,11 @@ function drush_rabbitmq_worker($queue_name) {
   $queue = $queue_factory->get($queue_name);
   assert($queue instanceof Queue);
 
+  /* Close rabbitmq connection on shutdown. */
+  drupal_register_shutdown_function(function () use ($queue) {
+    $queue->shutdown();
+  });
+
   /** @var \Psr\Log\LoggerInterface $logger */
   $logger = \Drupal::service('logger.channel.rabbitmq-drush');
 
