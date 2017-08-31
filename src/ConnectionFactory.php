@@ -40,7 +40,7 @@ class ConnectionFactory {
    */
   public function __construct(Settings $settings) {
     // Cannot continue if the library wasn't loaded.
-    assert(class_exists("\PhpAmqpLib\Connection\AMQPStreamConnection"),
+    assert(class_exists('\PhpAmqpLib\Connection\AMQPStreamConnection'),
       'Could not find php-amqplib. See the rabbitmq/README.md file for details.'
     );
     $this->settings = $settings;
@@ -49,7 +49,7 @@ class ConnectionFactory {
   /**
    * Get a configured connection to RabbitMQ.
    *
-   * @return \PhpAmqpLib\Connection\AbstractConnection
+   * @return \PhpAmqpLib\Connection\AMQPSSLConnection|\PhpAmqpLib\Connection\AMQPStreamConnection
    *   The AMQP or SSL connection.
    */
   public function getConnection() {

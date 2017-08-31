@@ -7,6 +7,7 @@
 
 use Drupal\Core\Queue\QueueWorkerInterface;
 use Drupal\rabbitmq\ConnectionFactory;
+use Drupal\rabbitmq\Queue\Queue;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -88,6 +89,12 @@ function drush_rabbitmq_queue_info($queueName = NULL) {
 
 /**
  * Command callback: Create a queue worker.
+ *
+ * @param string $queue_name
+ *   The name of the queue/ID of the queue worker plugin to wait on.
+ *
+ * @return bool
+ *   Did the command succeed ?
  */
 function drush_rabbitmq_worker($queueName) {
   $container = (new Drupal())->getContainer();
@@ -106,9 +113,26 @@ function drush_rabbitmq_worker($queueName) {
   $memoryLimit = intval(drush_get_option('memory_limit', -1));
   $timeout = intval(drush_get_option('rabbitmq_timeout', 120));
 
+  // Before we start listening for messages, make sure the callback
+  // worker is callable.
+  $worker = $workerManager->createInstance($queueName);
+  if (!($worker instanceof QueueWorkerInterface)) {
+    return drush_set_error("Worker for queue does not implement the worker interface.");
+  }
+
+  /* @var \Drupal\Core\Queue\QueueFactory $queueFactory */
+  $queueFactory = $container->get('queue');
+  /* @var \Drupal\rabbitmq\Queue\queue $queue */
+  $queue = $queueFactory->get($queueName);
+  assert($queue instanceof Queue);
+
+  /* Close rabbitmq connection on shutdown. */
+  drupal_register_shutdown_function(function () use ($queue) {
+    $queue->shutdown();
+  });
+
   /** @var \Psr\Log\LoggerInterface $logger */
   $logger = $container->get('logger.channel.rabbitmq-drush');
-  $continueListening = TRUE;
 
   if ($maxIterations > 0) {
     $readyMessage = "RabbitMQ worker ready to receive up to @count messages.";
@@ -120,49 +144,38 @@ function drush_rabbitmq_worker($queueName) {
   }
   $logger->info($readyMessage, $readyArgs, WATCHDOG_INFO);
 
+  $callback = function (AMQPMessage $msg) use ($worker, $queueName, $logger) {
+    $logger->info('(Drush) Received queued message: @id', [
+      '@id' => $msg->delivery_info['delivery_tag'],
+    ]);
+
+    try {
+      // Build the item to pass to the queue worker.
+      $item = (object) [
+        'id' => $msg->delivery_info['delivery_tag'],
+        'data' => json_decode($msg->body),
+      ];
+
+      // Call the queue worker.
+      $worker->processItem($item->data);
+
+      // Remove the item from the queue.
+      $msg->delivery_info['channel']->basic_ack($item->id);
+      $logger->info('(Drush) Item @id acknowledged from @queue', [
+        '@id' => $item->id,
+        '@queue' => $queueName,
+      ]);
+    }
+    catch (\Exception $e) {
+      watchdog_exception('rabbitmq', $e);
+      $msg->delivery_info['channel']->basic_reject($msg->delivery_info['delivery_tag'], TRUE);
+    }
+  };
+
+  $continueListening = TRUE;
+
   while ($continueListening) {
     try {
-      // Before we start listening for messages, make sure the callback
-      // worker is callable.
-      $worker = $workerManager->createInstance($queueName);
-      if (!($worker instanceof QueueWorkerInterface)) {
-        return drush_set_error("Worker for queue does not implement the worker interface.");
-      }
-
-      /* @var \Drupal\Core\Queue\QueueFactory $queueFactory */
-      $queueFactory = $container->get('queue');
-      /* @var \Drupal\rabbitmq\Queue\queue $queue */
-      $queue = $queueFactory->get($queueName);
-      assert('$queue instanceof \Drupal\rabbitmq\Queue\Queue');
-
-      $callback = function (AMQPMessage $msg) use ($worker, $queueName, $logger) {
-        $logger->info('(Drush) Received queued message: @id', [
-          '@id' => $msg->delivery_info['delivery_tag'],
-        ]);
-
-        try {
-          // Build the item to pass to the queue worker.
-          $item = (object) [
-            'id' => $msg->delivery_info['delivery_tag'],
-            'data' => json_decode($msg->body),
-          ];
-
-          // Call the queue worker.
-          $worker->processItem($item->data);
-
-          // Remove the item from the queue.
-          $msg->delivery_info['channel']->basic_ack($item->id);
-          $logger->info('(Drush) Item @id acknowledged from @queue', [
-            '@id' => $item->id,
-            '@queue' => $queueName,
-          ]);
-        }
-        catch (\Exception $e) {
-          watchdog_exception('rabbitmq', $e);
-          $msg->delivery_info['channel']->basic_reject($msg->delivery_info['delivery_tag'], TRUE);
-        }
-      };
-
       $queue->getChannel()->basic_qos(NULL, 1, NULL);
       $queue->getChannel()
         ->basic_consume($queueName, '', FALSE, FALSE, FALSE, FALSE, $callback);

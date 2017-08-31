@@ -9,7 +9,12 @@ use PhpAmqpLib\Channel\AMQPChannel;
 use Psr\Log\LoggerInterface;
 
 /**
- * Class QueueBase.
+ * Low-level Queue API implementation for RabbitMQ on top of AMQPlib.
+ *
+ * This class contains the low-level properties and methods not exposed by
+ * the Queue API ReliableQueueInterface: those are implemented in Queue.php.
+ *
+ * @see \Drupal\rabbitmq\Queue\Queue
  */
 abstract class QueueBase {
 
@@ -60,7 +65,7 @@ abstract class QueueBase {
   /**
    * A queue array: [writer, item count, consumer count].
    *
-   * @var array
+   * @var array|null
    */
   protected $queue;
 
@@ -142,7 +147,10 @@ abstract class QueueBase {
    *   Options overriding the queue defaults.
    *
    * @return mixed|null
-   *   Not strongly specified by php-amqplib.
+   *   Not strongly specified by php-amqplib. Expected to be a 3-item array:
+   *   - ProtocolWriter
+   *   - Number of items
+   *   - Number of clients
    */
   protected function getQueue(AMQPChannel $channel, array $options = []) {
     if (!isset($this->queue)) {
@@ -168,6 +176,18 @@ abstract class QueueBase {
     }
 
     return $this->queue;
+  }
+
+  /**
+   * Shutdown.
+   */
+  public function shutdown() {
+    if ($this->channel) {
+      $this->channel->close();
+    }
+    if ($this->connection) {
+      $this->connection->close();
+    }
   }
 
 }
