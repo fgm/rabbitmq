@@ -8,7 +8,7 @@
 use Drupal\rabbitmq\ConnectionFactory;
 use Drupal\rabbitmq\Consumer;
 use Drupal\rabbitmq\Exception\Exception;
-use Drupal\rabbitmq\InvalidWorkerException;
+use Drupal\rabbitmq\Exception\InvalidWorkerException;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Symfony\Component\Yaml\Yaml;
@@ -108,6 +108,11 @@ function drush_rabbitmq_worker($queueName) {
 
   $consumer->logStart();
   $queueArgs = ['@name' => $queueName];
+
+  drupal_register_shutdown_function(function() use ($consumer, $queueName) {
+    $consumer->shutdownQueue($queueName);
+  });
+
   try {
     $consumer->consume($queueName);
   }

@@ -169,9 +169,12 @@ class Consumer {
    * Signal handler.
    *
    * @see \Drupal\rabbitmq\Consumer::consume()
+   *
+   * On a timeout signal, the connections is already closed, so do not attempt
+   * to shutdown the queue.
    */
   public function onTimeout() {
-    echo "Timeout reached\n";
+    drupal_set_message('Timeout reached');
     $this->logger->info('Timeout reached');
     $this->stopListening();
   }
@@ -188,7 +191,7 @@ class Consumer {
     $this->startListening();
     $worker = $this->getWorker($queueName);
     // Allow obtaining a decoder from the worker to have a sane default, while
-    // being able to override it on service instantation.
+    // being able to override it on service instantiation.
     if ($worker instanceof DecoderAwareWorkerInterface && !isset($this->decoder)) {
       $this->setDecoder($worker->getDecoder());
     }
@@ -199,6 +202,7 @@ class Consumer {
 
     $channel = $this->getChannel($queue);
     assert($channel instanceof AMQPChannel);
+    $channel->basic_qos(NULL, 1, NULL);
 
     $maxIterations = $this->getOption(self::OPTION_MAX_ITERATIONS);
     $memoryLimit = $this->getOption(self::OPTION_MEMORY_LIMIT);
@@ -210,7 +214,6 @@ class Consumer {
 
     while ($this->continueListening) {
       try {
-        $channel->basic_qos(NULL, 1, NULL);
         $channel->basic_consume($queueName, '', FALSE, FALSE, FALSE, FALSE, $callback);
 
         // Begin listening for messages to process.
@@ -239,7 +242,6 @@ class Consumer {
         $this->stopListening();
       }
       catch (AMQPIOWaitException $e) {
-        echo "Caught AMQPIOWaitException\n";
         $this->stopListening();
         $channel->close();
       }
@@ -417,6 +419,18 @@ class Consumer {
     }
 
     return FALSE;
+  }
+
+  /**
+   * Shutdown a queue.
+   *
+   * @param string $queueName
+   */
+  public function shutdownQueue(string $queueName) {
+    $queue = $this->queueFactory->get($queueName);
+    if ($queue instanceof Queue) {
+      $queue->shutdown();
+    }
   }
 
   /**
