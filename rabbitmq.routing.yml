@@ -1,0 +1,7 @@
+rabbitmq.properties:
+  path: '/admin/reports/status/rabbitmq.properties'
+  defaults:
+    _controller: '\Drupal\rabbitmq\Controller\ServerPropertiesController::build'
+    _title: 'RabbitMQ properties'
+  requirements:
+    _permission: 'administer site configuration'

@@ -6,40 +6,24 @@ use Drupal\Core\Queue\ReliableQueueInterface;
 use PhpAmqpLib\Message\AMQPMessage;
 
 /**
- * RabbitMQ queue implementation.
+ * Queue API Backend implementation on top of AMQPlib.
+ *
+ * This class only contains the ReliableQueueInterface methods, no lower-level
+ * method specific to the implementation: those are in QueueBase.php.
+ *
+ * @see \Drupal\rabbitmq\Queue\QueueBase
  */
 class Queue extends QueueBase implements ReliableQueueInterface {
 
   /**
-   * The logger service.
-   *
-   * @var \Psr\Log\LoggerInterface
-   */
-  protected $logger;
-
-  /**
    * Array of message objects claimed from the queue.
+   *
+   * @var array
    */
-  protected $messages = array();
+  protected $messages = [];
 
   /**
-   * The queue name.
-   *
-   * @var string
-   */
-  protected $name;
-
-  /**
-   * Add a queue item and store it directly to the queue.
-   *
-   * @param mixed $data
-   *   Arbitrary data to be associated with the new task in the queue.
-   *
-   * @return bool
-   *   TRUE if the item was successfully created and was (best effort) added
-   *   to the queue, otherwise FALSE. We don't guarantee the item was
-   *   committed to disk etc, but as far as we know, the item is now in the
-   *   queue.
+   * {@inheritdoc}
    */
   public function createItem($data) {
     $logger_args = [
@@ -67,7 +51,9 @@ class Queue extends QueueBase implements ReliableQueueInterface {
       $result = TRUE;
     }
     catch (\Exception $e) {
-      $this->logger->error('Failed to send item to queue %queue: @message', $logger_args + array('@message' => $e->getMessage()));
+      $this->logger->error('Failed to send item to queue %queue: @message', $logger_args + [
+        '@message' => $e->getMessage(),
+      ]);
       $result = FALSE;
     }
 
@@ -91,7 +77,9 @@ class Queue extends QueueBase implements ReliableQueueInterface {
   public function numberOfItems() {
     // Retrieve information about the queue without modifying it.
     $queue_options = ['passive' => TRUE];
-    $jobs = array_slice($this->getQueue($this->getChannel(), $queue_options), 1, 1);
+    $this->queue = NULL;
+    $queue = $this->getQueue($this->getChannel(), $queue_options);
+    $jobs = $queue ? array_slice($queue, 1, 1) : [];
     return empty($jobs) ? 0 : $jobs[0];
   }
 
@@ -115,7 +103,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    *   problem.
    */
   public function claimItem($lease_time = 3600) {
-    $this->getChannel()->basic_qos(NULL, 1, NULL);
+    $this->getChannel()->basic_qos(NULL, 1, FALSE);
     if (!$msg = $this->getChannel()->basic_get($this->name)) {
       return FALSE;
     }
@@ -170,6 +158,13 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    *   acknowledgement to the server which would remove the item from the queue.
    */
   public function releaseItem($item) {
+    /** @var \PhpAmqpLib\Message\AMQPMessage $message */
+    $message = $this->messages[$item->id];
+
+    /* @var \PhpAmqpLib\Channel\AMQPChannel $channel */
+    $channel = $message->delivery_info['channel'];
+
+    $channel->basic_nack($message->delivery_info['delivery_tag'], FALSE, TRUE);
     unset($this->messages[$item->id]);
     return TRUE;
   }
@@ -193,7 +188,13 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    * Delete a queue and every item in the queue.
    */
   public function deleteQueue() {
-    $this->getChannel()->queue_delete($this->name);
+    if (empty($this->queue)) {
+      return;
+    }
+    $channel = $this->getChannel();
+    $channel->queue_purge($this->name);
+    $channel->queue_delete($this->name);
+    $this->queue = NULL;
   }
 
 }
