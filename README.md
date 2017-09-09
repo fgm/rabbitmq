@@ -1,7 +1,7 @@
 RabbitMQ Integration
 ====================
 
-[![Build Status](https://travis-ci.org/FGM/rabbitmq.svg?branch=travis)](https://travis-ci.org/FGM/rabbitmq)[![Code Coverage](https://scrutinizer-ci.com/g/FGM/rabbitmq/badges/coverage.png?b=travis)](https://scrutinizer-ci.com/g/FGM/rabbitmq/?branch=travis)[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/FGM/rabbitmq/badges/quality-score.png?b=travis)](https://scrutinizer-ci.com/g/FGM/rabbitmq/?branch=travis)
+[![Build Status][travis-status]][travis-url] [![Code Coverage][scrutinizer-coverage]][scrutinizer-url] [![Scrutinizer Code Quality][scrutinizer-qa]][scrutinizer-url]
 
 Requirements
 ------------
@@ -80,3 +80,10 @@ $settings['rabbitmq_credentials'] = [
   ],
 ];
 ```
+
+
+[travis-status]: https://travis-ci.org/FGM/rabbitmq.svg?branch=travis
+[travis-url]: https://travis-ci.org/FGM/rabbitmq
+[scrutinizer-coverage]: https://scrutinizer-ci.com/g/FGM/rabbitmq/badges/coverage.png?b=travis
+[scrutinizer-url]: https://scrutinizer-ci.com/g/FGM/rabbitmq/?branch=travis
+[scrutinizer-qa]: https://scrutinizer-ci.com/g/FGM/rabbitmq/badges/quality-score.png?b=travis
