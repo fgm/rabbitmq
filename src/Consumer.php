@@ -218,7 +218,7 @@ class Consumer {
 
     $channel = $this->getChannel($queue);
     assert($channel instanceof AMQPChannel);
-    $channel->basic_qos(NULL, 1, NULL);
+    $channel->basic_qos(NULL, 1, FALSE);
 
     $maxIterations = $this->getOption(self::OPTION_MAX_ITERATIONS);
     $memoryLimit = $this->getOption(self::OPTION_MEMORY_LIMIT);

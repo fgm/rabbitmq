@@ -48,7 +48,7 @@ class QueueFactory {
   /**
    * Constructor.
    *
-   * @param \Drupal\rabbitmq\ConnectionFactory $connection_factory
+   * @param \Drupal\rabbitmq\ConnectionFactory $connectionFactory
    *   The connection factory service.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $modules
    *   The module handler service.
@@ -58,13 +58,13 @@ class QueueFactory {
    *   The config.factory service.
    */
   public function __construct(
-    ConnectionFactory $connection_factory,
+    ConnectionFactory $connectionFactory,
     ModuleHandlerInterface $modules,
     LoggerInterface $logger,
     ConfigFactoryInterface $configFactory
   ) {
     $this->configFactory = $configFactory;
-    $this->connectionFactory = $connection_factory;
+    $this->connectionFactory = $connectionFactory;
     $this->logger = $logger;
     $this->modules = $modules;
   }
@@ -90,12 +90,12 @@ class QueueFactory {
   public static function overrideSettings() {
     // Regrettably, Settings can not be modified using the public core API.
     $settings = Settings::getInstance();
-    $rc = new \ReflectionClass($settings);
-    $rp = $rc->getProperty('storage');
-    $rp->setAccessible(TRUE);
-    $storage = $rp->getValue($settings);
+    $reflectionClass = new \ReflectionClass($settings);
+    $reflectionProperty = $reflectionClass->getProperty('storage');
+    $reflectionProperty->setAccessible(TRUE);
+    $storage = $reflectionProperty->getValue($settings);
     unset($storage['queue_default']);
-    $rp->setValue($settings, $storage);
+    $reflectionProperty->setValue($settings, $storage);
   }
 
 }

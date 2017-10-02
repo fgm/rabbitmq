@@ -58,19 +58,19 @@ class ServerPropertiesController {
       ->getServerProperties();
 
     // Read the latest minor version from the library CHANGELOG.md.
-    $rc = new \ReflectionClass(AbstractConnection::class);
-    $ac = $rc->getFileName();
-    $changelog = file(realpath(dirname($ac) . '/../../CHANGELOG.md'));
+    $reflectionClass = new \ReflectionClass(AbstractConnection::class);
+    $filename = $reflectionClass->getFileName();
+    $changelog = file(realpath(dirname($filename) . '/../../CHANGELOG.md'));
     $filteredChangelog = array_filter($changelog, function ($row) {
       return preg_match('/^## [\d\.]+ -/', $row);
     });
     $latestChange = preg_replace('/^## /', '', reset($filteredChangelog));
 
     // Build the library properties from in-code data and changelog data.
-    $libraryProperties = AbstractConnection::$LIBRARY_PROPERTIES;
-    $usedLibraryProperties = [
-      $this->t('Product: @product', ['@product' => $libraryProperties['product'][1]]),
-      $this->t('Version: @version', ['@version' => $libraryProperties['version'][1]]),
+    $allProperties = AbstractConnection::$LIBRARY_PROPERTIES;
+    $usedProperties = [
+      $this->t('Product: @product', ['@product' => $allProperties['product'][1]]),
+      $this->t('Version: @version', ['@version' => $allProperties['version'][1]]),
       $this->t('Changelog version: @version', ['@version' => $latestChange]),
     ];
 
@@ -90,7 +90,7 @@ class ServerPropertiesController {
         '#open' => TRUE,
         'properties' => [
           '#theme' => 'item_list',
-          '#items' => $usedLibraryProperties,
+          '#items' => $usedProperties,
         ],
       ],
     ];

@@ -7,8 +7,9 @@
 
 use Drupal\rabbitmq\ConnectionFactory;
 use Drupal\rabbitmq\Consumer;
-use Drupal\rabbitmq\Exception\Exception;
-use Drupal\rabbitmq\Exception\InvalidArgumentException;
+// Avoid possible conflict with the builtin \[InvalidArgument]Exception.
+use Drupal\rabbitmq\Exception\Exception as RabbitMqException;
+use Drupal\rabbitmq\Exception\InvalidArgumentException as RabbitMqInvalidArgumentException;
 use Drupal\rabbitmq\Exception\InvalidWorkerException;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -16,6 +17,9 @@ use Symfony\Component\Yaml\Yaml;
 
 /**
  * Implements hook_drush_command().
+ *
+ * @return array
+ *   An array of Drush command definitions.
  */
 function rabbitmq_drush_command() {
   $file = preg_replace('/(inc|php)$/', 'yml', __FILE__);
@@ -120,10 +124,10 @@ function drush_rabbitmq_worker($queueName) {
   catch (InvalidWorkerException $e) {
     return drush_set_error(dt("Worker for queue @name does not implement the worker interface.", $queueArgs));
   }
-  catch (InvalidArgumentException $e) {
+  catch (RabbitMqInvalidArgumentException $e) {
     return drush_set_error($e->getMessage());
   }
-  catch (Exception $e) {
+  catch (RabbitMqException $e) {
     return drush_set_error(dt("Could not obtain channel for queue.", $queueArgs));
   }
 
