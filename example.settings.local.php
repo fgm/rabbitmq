@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * Example settings to connect to RabbitMQ.

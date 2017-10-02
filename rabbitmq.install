@@ -8,6 +8,7 @@
 use Drupal\Core\Site\Settings;
 use Drupal\Core\Url;
 use Drupal\rabbitmq\ConnectionFactory;
+use Drupal\rabbitmq\Consumer;
 use Drupal\rabbitmq\Queue\QueueBase;
 use Drupal\rabbitmq\Queue\QueueFactory;
 
@@ -25,6 +26,7 @@ function rabbitmq_requirements($phase) {
     require_once __DIR__ . '/src/Queue/QueueBase.php';
     require_once __DIR__ . '/src/Queue/Queue.php';
     require_once __DIR__ . '/src/Queue/QueueFactory.php';
+    require_once __DIR__ . '/src/Consumer.php';
   }
 
   $key = QueueBase::MODULE;
@@ -34,12 +36,15 @@ function rabbitmq_requirements($phase) {
     ],
   ];
 
+  Consumer::hookRequirements($phase, $req);
+
   if ($phase === 'runtime') {
     // Routes are not know during install.
     $url = Url::fromRoute('rabbitmq.properties')->toString();
     $req[$key]['description'] = t('RabbitMQ connection information. See <a href=":link">RabbitMQ properties</a>.', [
       ':link' => $url,
     ]);
+    $req[$key]['severity'] = REQUIREMENT_INFO;
   }
 
   $credentials = Settings::get(ConnectionFactory::CREDENTIALS);
@@ -61,8 +66,8 @@ function rabbitmq_requirements($phase) {
       ]);
       $req[$key]['severity'] = REQUIREMENT_ERROR;
       // If RabbitMQ is set as the default queue service, remove it to avoid
-      // breakage in hook_requirements() implementations depending on that default
-      // queue, like update_requirements().
+      // breakage in hook_requirements() implementations depending on that
+      // default queue, like update_requirements().
       if (Settings::get('queue_default') == 'queue.rabbitmq') {
         QueueFactory::overrideSettings();
         $req[$key]['description'] = t('The default queue service pointing to queue.rabbitmq in settings has been reset to its default to avoid breaking requirements checks depending on the queue service, like update_requirements(), since the RabbitMQ queue is not actually available.');

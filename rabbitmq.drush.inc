@@ -8,6 +8,7 @@
 use Drupal\rabbitmq\ConnectionFactory;
 use Drupal\rabbitmq\Consumer;
 use Drupal\rabbitmq\Exception\Exception;
+use Drupal\rabbitmq\Exception\InvalidArgumentException;
 use Drupal\rabbitmq\Exception\InvalidWorkerException;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -106,18 +107,21 @@ function drush_rabbitmq_worker($queueName) {
     return (int) drush_get_option($name, Consumer::OPTIONS[$name]);
   });
 
-  $consumer->logStart();
   $queueArgs = ['@name' => $queueName];
 
-  drupal_register_shutdown_function(function() use ($consumer, $queueName) {
+  drupal_register_shutdown_function(function () use ($consumer, $queueName) {
     $consumer->shutdownQueue($queueName);
   });
 
   try {
+    $consumer->logStart();
     $consumer->consume($queueName);
   }
   catch (InvalidWorkerException $e) {
     return drush_set_error(dt("Worker for queue @name does not implement the worker interface.", $queueArgs));
+  }
+  catch (InvalidArgumentException $e) {
+    return drush_set_error($e->getMessage());
   }
   catch (Exception $e) {
     return drush_set_error(dt("Could not obtain channel for queue.", $queueArgs));

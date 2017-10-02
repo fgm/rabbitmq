@@ -72,7 +72,7 @@ before_script:
   - chmod 644 sites/default/settings.php
 
   # Define RabbitMQ settings
-  - tail --lines=+8 modules/contrib/rabbitmq/example.settings.local.php >> sites/default/settings.php
+  - tail --lines=+9 modules/contrib/rabbitmq/example.settings.local.php >> sites/default/settings.php
 
   # reference and enable RabbitMQ module in build site.
   #- ln -s $(readlink -e $(cd -)) drupal-8.3.x-dev/modules/custom/rabbitmq

@@ -7,11 +7,13 @@ use Drupal\Core\Queue\QueueFactory;
 use Drupal\Core\Queue\QueueWorkerInterface;
 use Drupal\Core\Queue\QueueWorkerManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\Url;
 use Drupal\rabbitmq\Exception\InvalidArgumentException;
 use Drupal\rabbitmq\Exception\InvalidWorkerException;
 use Drupal\rabbitmq\Exception\OutOfRangeException;
 use Drupal\rabbitmq\Exception\RuntimeException;
 use Drupal\rabbitmq\Queue\Queue;
+use Drupal\rabbitmq\Queue\QueueBase;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPOutOfRangeException;
@@ -21,9 +23,14 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 /**
  * Class Consumer provides a service wrapping queue consuming operations.
+ *
+ * Note that it does not carray the value of its options, but getters for them,
+ * to support multiple ways of accessing options, e.g. Drush vs Console vs Web.
  */
 class Consumer {
   use StringTranslationTrait;
+
+  const EXTENSION_PCNTL = 'pcntl';
 
   const OPTION_MAX_ITERATIONS = 'max_iterations';
   const OPTION_MEMORY_LIMIT = 'memory_limit';
@@ -33,7 +40,7 @@ class Consumer {
   const OPTIONS = [
     self::OPTION_MAX_ITERATIONS => 0,
     self::OPTION_MEMORY_LIMIT => -1,
-    self::OPTION_TIMEOUT => 120,
+    self::OPTION_TIMEOUT => NULL,
   ];
 
   /**
@@ -58,6 +65,13 @@ class Consumer {
    * @var callable
    */
   protected $optionGetter;
+
+  /**
+   * Was the Pre-Flight Check successful ? Yes | No | Not yet run.
+   *
+   * @var bool|null
+   */
+  protected $pfcOk = NULL;
 
   /**
    * The queue service.
@@ -146,13 +160,14 @@ class Consumer {
       return NULL;
     }
     $getter = $this->optionGetter;
-    return $getter($name);
+    return is_callable($getter) ? $getter($name) : NULL;
   }
 
   /**
    * Log an event about the queue run.
    */
   public function logStart() {
+    $this->preFlightCheck();
     $maxIterations = $this->getOption(self::OPTION_MAX_ITERATIONS);
     if ($maxIterations > 0) {
       $readyMessage = "RabbitMQ worker ready to receive up to @count messages.";
@@ -174,7 +189,7 @@ class Consumer {
    * to shutdown the queue.
    */
   public function onTimeout() {
-    drupal_set_message('Timeout reached');
+    drupal_set_message($this->t('Timeout reached'));
     $this->logger->info('Timeout reached');
     $this->stopListening();
   }
@@ -188,6 +203,7 @@ class Consumer {
    * @throws \Exception
    */
   public function consume(string $queueName) {
+    $this->preFlightCheck();
     $this->startListening();
     $worker = $this->getWorker($queueName);
     // Allow obtaining a decoder from the worker to have a sane default, while
@@ -422,9 +438,53 @@ class Consumer {
   }
 
   /**
+   * Implements hook_requirements().
+   */
+  public static function hookRequirements($phase, array &$req) {
+    $key = QueueBase::MODULE . '-consumer';
+    $req[$key]['title'] = t('RabbitMQ Consumer');
+    $options = [
+      ':ext' => Url::fromUri('http://php.net/pcntl')->toString(),
+      '%option' => static::OPTION_TIMEOUT,
+    ];
+    if (!extension_loaded(static::EXTENSION_PCNTL)) {
+      $req[$key]['description'] = t('Extension <a href=":ext">PCNTL</a> not present in PHP. Option  %option is not available in the RabbitMQ consumer.', $options);
+      $req[$key]['severity'] = REQUIREMENT_WARNING;
+    }
+    else {
+      $req[$key]['description'] = t('Extension <a href=":ext">PCNTL</a> is present in PHP. Option   %option is available in the RabbitMQ consumer.', $options);
+      $req[$key]['severity'] = REQUIREMENT_OK;
+    }
+  }
+
+  /**
+   * Ensures options are consistent with configuration.
+   *
+   * @throws \Drupal\rabbitmq\Exception\InvalidArgumentException
+   *   Options are not compatible with configuration.
+   */
+  protected function preFlightCheck() {
+    if ($this->pfcOk) {
+      return;
+    }
+    $this->pfcOk = FALSE;
+    $timeout = $this->getOption(self::OPTION_TIMEOUT);
+    if (!empty($timeout) && !extension_loaded(static::EXTENSION_PCNTL)) {
+      $message = $this->t('Option @option is not available without the @ext extension.', [
+        '@option' => static::OPTION_TIMEOUT,
+        '@ext' => static::EXTENSION_PCNTL,
+      ]);
+      throw new InvalidArgumentException($message);
+    }
+    $this->pfcOk = TRUE;
+  }
+
+  /**
    * Shutdown a queue.
    *
    * @param string $queueName
+   *   The name of the queue, also the name of the QueueWorker plugin processing
+   *   its items.
    */
   public function shutdownQueue(string $queueName) {
     $queue = $this->queueFactory->get($queueName);
