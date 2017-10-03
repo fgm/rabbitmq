@@ -22,6 +22,17 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    */
   protected $messages = [];
 
+  public function addMessage($id, $message) {
+    $this->messages[$id] = $message;
+  }
+
+  public function getMessage($id) {
+    if (isset($this->messages[$id])) {
+      return $this->messages[$id];
+    }
+    return FALSE;
+  }
+
   /**
    * {@inheritdoc}
    */
@@ -52,8 +63,8 @@ class Queue extends QueueBase implements ReliableQueueInterface {
     }
     catch (\Exception $e) {
       $this->logger->error('Failed to send item to queue %queue: @message', $logger_args + [
-        '@message' => $e->getMessage(),
-      ]);
+          '@message' => $e->getMessage(),
+        ]);
       $result = FALSE;
     }
 
@@ -163,7 +174,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
 
     /* @var \PhpAmqpLib\Channel\AMQPChannel $channel */
     $channel = $message->delivery_info['channel'];
-
+    drush_print_r($channel);
     $channel->basic_nack($message->delivery_info['delivery_tag'], FALSE, TRUE);
     unset($this->messages[$item->id]);
     return TRUE;
