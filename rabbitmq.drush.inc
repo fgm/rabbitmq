@@ -119,7 +119,7 @@ function drush_rabbitmq_worker($queueName) {
 
   try {
     $consumer->logStart();
-    $consumer->consume($queueName);
+    $consumer->consumeQueueAPI($queueName);
   }
   catch (InvalidWorkerException $e) {
     return drush_set_error(dt("Worker for queue @name does not implement the worker interface.", $queueArgs));

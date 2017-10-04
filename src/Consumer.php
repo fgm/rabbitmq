@@ -156,7 +156,7 @@ class Consumer {
    *   is unknown.
    */
   public function getOption(string $name) {
-    if (!isset(static::OPTIONS[$name])) {
+    if (!array_key_exists($name, static::OPTIONS)) {
       return NULL;
     }
     $getter = $this->optionGetter;
@@ -195,7 +195,7 @@ class Consumer {
   }
 
   /**
-   * Main logic: consume the specified queue.
+   * Main logic: consume the specified queue using AMQP.
    *
    * @param string $queueName
    *   The name of the queue to consume.
@@ -268,6 +268,114 @@ class Consumer {
         throw new \Exception($e);
       }
     }
+  }
+
+  /**
+   * Main logic: consume the specified queue using Queue API.
+   *
+   * @param string $queueName
+   *   The name of the queue to consume.
+   *
+   * @throws \Exception
+   *
+   * @TODO Probably needs to do more on SuspendQueueException.
+   */
+  public function consumeQueueAPI(string $queueName) {
+    $this->preFlightCheck();
+    $this->startListening();
+    $worker = $this->getWorker($queueName);
+    // Allow obtaining a decoder from the worker to have a sane default, while
+    // being able to override it on service instantiation.
+    if ($worker instanceof DecoderAwareWorkerInterface && !isset($this->decoder)) {
+      $this->setDecoder($worker->getDecoder());
+    }
+
+    /* @var \Drupal\rabbitmq\Queue\queue $queue */
+    $queue = $this->queueFactory->get($queueName);
+    assert($queue instanceof Queue);
+
+    $maxIterations = $this->getOption(self::OPTION_MAX_ITERATIONS);
+    $memoryLimit = $this->getOption(self::OPTION_MEMORY_LIMIT);
+    $timeout = $this->getOption(self::OPTION_TIMEOUT);
+    if (isset($timeout)) {
+      pcntl_signal(SIGALRM, [$this, 'onTimeout']);
+    }
+    else {
+      $timeout = 0;
+    }
+
+    $iteration = 0;
+    $startTime = microtime(TRUE);
+    do {
+      $item = NULL;
+      if ($timeout) {
+        pcntl_alarm($timeout);
+        $item = $queue->claimItem();
+        pcntl_alarm(0);
+      }
+      else {
+        $item = $queue->claimItem();
+      }
+
+      // Break on memory_limit reached before process.
+      if ($this->hitMemoryLimit($memoryLimit)) {
+        $this->stopListening();
+        break;
+      }
+
+      $currentTime = microtime(TRUE);
+      // If we did not get an object, do not try to process it.
+      if (!is_object($item)) {
+        usleep(10);
+        // Only loop if the current continuous wait did not exceed timeout.
+        if ($currentTime > $startTime + $timeout) {
+          break;
+        }
+        else {
+          continue;
+        }
+      }
+
+      // We got a normal item, try to handle it.
+      try {
+        // Call the queue worker.
+        $worker->processItem($item->data);
+
+        // Remove the item from the queue.
+        $queue->deleteItem($item);
+        $this->logger->debug('(Drush) Item @id acknowledged from @queue', [
+          '@id' => $item->id,
+          '@queue' => $queueName,
+        ]);
+      }
+      // Reserved QueueAPI exception: releaseItem and continue work.
+      catch (RequeueException $e) {
+        $queue->releaseItem($item);
+        $this->logger->debug('(Drush) Item @id put back on @queue', [
+          '@id' => $item->id,
+          '@queue' => $queueName,
+        ]);
+      }
+      // Reserved QueueAPI exception: stop working on this queue.
+      catch (SuspendQueueException $e) {
+        $queue->releaseItem($item);
+        $this->stopListening();
+      }
+      // Restart wait period: we handled a valid item.
+      $startTime = microtime(TRUE);
+
+      // Break on memory_limit reached after process.
+      if ($this->hitMemoryLimit($memoryLimit)) {
+        $this->stopListening();
+        break;
+      }
+
+      // Break on max_iterations reached. Only count actual items.
+      $iteration++;
+      if ($this->hitIterationsLimit($maxIterations, $iteration)) {
+        $this->stopListening();
+      }
+    } while ($this->continueListening);
   }
 
   /**
