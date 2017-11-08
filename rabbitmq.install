@@ -50,7 +50,7 @@ function rabbitmq_requirements($phase) {
   $credentials = Settings::get(ConnectionFactory::CREDENTIALS);
   if (empty($credentials)) {
     $req[$key]['description'] = t('RabbitMQ credentials not found in settings.php');
-    $req[$key]['severity'] = REQUIREMENT_ERROR;
+    $req[$key]['severity'] = REQUIREMENT_WARNING;
     return $req;
   };
 
@@ -64,7 +64,7 @@ function rabbitmq_requirements($phase) {
       $req[$key]['value'] = t('Could not connect to RabbitMQ: "@message".', [
         '@message' => $e->getMessage(),
       ]);
-      $req[$key]['severity'] = REQUIREMENT_ERROR;
+      $req[$key]['severity'] = REQUIREMENT_WARNING;
       // If RabbitMQ is set as the default queue service, remove it to avoid
       // breakage in hook_requirements() implementations depending on that
       // default queue, like update_requirements().
