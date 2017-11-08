@@ -2,7 +2,6 @@
 
 namespace Drupal\rabbitmq\Tests;
 
-use Drupal\rabbitmq\Queue\QueueFactory;
 use PhpAmqpLib\Message\AMQPMessage;
 
 /**
@@ -17,20 +16,34 @@ class RabbitMqConnectionTest extends RabbitMqTestBase {
    */
   public function testCreate() {
     /* @var \PhpAmqplib\Channel\AMQPChannel $channel */
-    $channel = $this->initChannel();
+    list($channel,) = $this->initChannel($this->queueName);
 
-    $payload = 'foo';
-    $message = new AMQPMessage($payload);
-    $channel->basic_publish($message);
+    $count = 10;
+    for ($i = 1; $i <= $count; $i++) {
+      $payload = 'foo' . $i;
+      $message = new AMQPMessage($payload);
+      $channel->basic_publish($message, '', $this->routingKey);
+    }
+
     $actual = FALSE;
-    $callback = function (AMQPMessage $message) use ($actual) {
+    $received = 0;
+    $callback = function (AMQPMessage $message) use (&$actual, &$received) {
       $actual = $message->body;
+      $received++;
     };
-    $channel->basic_consume(QueueFactory::DEFAULT_QUEUE_NAME, FALSE, TRUE, FALSE, FALSE, $callback);
-    while (count($channel->callbacks)) {
+    $channel->basic_consume($this->queueName,
+      /* $consumer_tag = */ 'test',
+      /* $no_local = */ FALSE,
+      /* $no_ack = */ TRUE,
+      /* $exclusive = */ FALSE,
+      /* $nowait = */ FALSE,
+      $callback
+      // Defaulted args: ticket, arguments.
+    );
+    while (count($channel->callbacks) && $received < $count) {
       $channel->wait();
     }
-    $this->assertEquals($actual, $payload);
+    $this->assertEquals($actual, 'foo' . $count);
     $this->cleanUp($channel);
   }
 

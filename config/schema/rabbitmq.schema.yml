@@ -1,0 +1,72 @@
+# Schema for the configuration files of the RabbitMQ module.
+
+rabbitmq.config:
+  type: config_object
+  label: 'RabbitMQ Config'
+  mapping:
+    exchanges:
+      type: sequence
+      label: 'Exchanges'
+      sequence:
+        type: rabbitmq.exchange
+
+    queues:
+      type: sequence
+      label: 'Queues'
+      sequence:
+        type: rabbitmq.queue
+
+rabbitmq.exchange:
+  type: mapping
+  label: 'Exchange options'
+  mapping:
+    auto_delete:
+      type: boolean
+      label: 'Auto-delete'
+    durable:
+      type: boolean
+      label: 'Durable'
+    internal:
+      type: boolean
+      label: 'Internal'
+    nowait:
+      type: boolean
+      label: 'No wait'
+    passive:
+      type: boolean
+      label: 'Passive'
+    type:
+      # direct, fanout, topic, match, headers
+      type: string
+      label: 'Exchange type'
+
+rabbitmq.queue:
+  type: mapping
+  label: 'Queue options'
+  mapping:
+    auto_delete:
+      type: boolean
+      label: 'Auto-delete'
+    durable:
+      type: boolean
+      label: 'Durable'
+    exclusive:
+      type: boolean
+      label: 'Exclusive'
+    nowait:
+      type: boolean
+      label: 'No wait'
+    passive:
+      type: boolean
+      label: 'Passive'
+    routing_keys:
+      type: sequence
+      label: 'Routing keys'
+      sequence:
+        type: string
+
+rabbitmq.config.exchanges.*:
+  type: rabbitmq.exchange
+
+rabbitmq.config.queues.*:
+  type: rabbitmq.queue

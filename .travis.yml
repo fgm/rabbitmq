@@ -1,0 +1,91 @@
+language: php
+
+php:
+  - '7.1'
+
+services:
+  - rabbitmq
+  - mysql
+
+matrix:
+  fast_finish: true
+
+sudo: true
+
+addons:
+  apt:
+    sources: []
+    packages:
+    - rabbitmq-server
+
+mysql:
+  database: travis_ci_rabbitmq
+  username: root
+  encoding: utf8
+
+before_install:
+  - sudo apt-get update > /dev/null
+
+  # Example of how to add a preinstalled, but not enabled extension like MongoDB:
+  #- echo "extension = mongodb.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+
+install:
+  # install php packages required for running a web server from drush on php 7
+  # - sudo apt-get install -y --force-yes php-cgi php-mysql
+
+  # Disable XDebug for speed.
+  # https://github.com/travis-ci/travis-ci/issues/1697
+  #- phpenv config-rm xdebug.ini
+
+  # add composer's global bin directory to the path
+  # see: https://github.com/drush-ops/drush#install---composer
+  - export PATH="$HOME/.composer/vendor/bin:$PATH"
+
+  # Configure PHP.
+  - echo 'date.timezone = "Europe/Paris"' >> ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/travis.ini
+
+  # Restore XDebug for coverage: need to back it up during removal else it won't be there to readd.
+  #- phpenv config-add xdebug.ini
+
+before_script:
+  # Code runs in /home/travis/build, which is the checkout root.
+
+  # remove Xdebug as we don't need it, is slows everything, and it causes
+  # PHP Fatal error:  Maximum function nesting level of '256' reached
+  #- phpenv config-rm xdebug.ini
+  # navigate out of module directory to prevent blown stack by recursive module lookup
+  - cd ../..
+
+  # download Drupal 8.3 core.
+  - wget -q -O - http://ftp.drupal.org/files/projects/drupal-8.3.x-dev.tar.gz | tar xz
+  - cd drupal-8.3.x-dev
+  - mkdir -p modules/contrib
+  - mv ../FGM/rabbitmq modules/contrib
+
+  # install Drush and PHP-AMQPlib in the project
+  - composer require -v "drush/drush" "php-amqplib/php-amqplib:^2.6"
+
+  # create new site, stubbing sendmail path with true to prevent delivery errors and manually resolving drush path
+  - mysql -e 'create database travis_ci_rabbitmq'
+  - php -d sendmail_path=`which true` vendor/bin/drush.php -y qd --profile=testing --no-server --db-url=mysql://root:@127.0.0.1/travis_ci_rabbitmq
+  - chmod 755 sites/default
+  - chmod 644 sites/default/settings.php
+
+  # Define RabbitMQ settings
+  - tail --lines=+9 modules/contrib/rabbitmq/example.settings.local.php >> sites/default/settings.php
+
+  # reference and enable RabbitMQ module in build site.
+  #- ln -s $(readlink -e $(cd -)) drupal-8.3.x-dev/modules/custom/rabbitmq
+  - vendor/bin/drush -y en rabbitmq
+
+  # Not needed: we don't have any web tests at this point.
+  # start a web server on port 8080, run in the background; wait for initialization.
+  # - drush runserver 127.0.0.1:8080 &
+  #- until netstat -an 2>/dev/null | grep '8080.*LISTEN'; do true; done
+
+script: SIMPLETEST_DB=mysql://root:@127.0.0.1/travis_ci_rabbitmq vendor/bin/phpunit --coverage-clover modules/contrib/rabbitmq/coverage.clover -c modules/contrib/rabbitmq/travis.phpunit.xml modules/contrib/rabbitmq
+
+after_script:
+  - cd modules/contrib/rabbitmq
+  - wget https://scrutinizer-ci.com/ocular.phar
+  - php ocular.phar code-coverage:upload --format=php-clover coverage.clover

@@ -1,3 +1,7 @@
+build:
+   tests:
+       override:
+           - /bin/true
 checks:
     php:
         avoid_fixme_comments: true
@@ -52,6 +56,7 @@ checks:
         one_class_per_file: true
         optional_parameters_at_the_end: true
         param_doc_comment_if_not_inferrable: true
+        parameters_in_camelcaps: true
         parameter_doc_comments: true
         php5_style_constructor: true
         phpunit_assertions: true
@@ -81,6 +86,8 @@ coding_style:
             general:
                 size: 2
         spaces:
+            around_operators:
+                concatenation: true
             before_parentheses:
                 closure_definition: true
         upper_lower_casing:
@@ -88,3 +95,7 @@ coding_style:
                 general: lower
             constants:
                 true_false_null: upper
+tools:
+    external_code_coverage:
+        timeout: 600
+

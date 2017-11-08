@@ -1,12 +1,19 @@
 services:
   rabbitmq.connection.factory:
-    class: '\Drupal\rabbitmq\Connection'
-    arguments: ['@settings', '@logger.channel.rabbitmq']
+    class: '\Drupal\rabbitmq\ConnectionFactory'
+    arguments:
+      - '@settings'
+      - '@logger.channel.rabbitmq'
+      - '@config.factory'
 
   # Name is defined by core usage, else it would be rabbitmq.queue.factory.
   queue.rabbitmq:
     class: '\Drupal\rabbitmq\Queue\QueueFactory'
-    arguments: ['@rabbitmq.connection.factory', '@module_handler', '@logger.channel.rabbitmq']
+    arguments:
+      - '@rabbitmq.connection.factory'
+      - '@module_handler'
+      - '@logger.channel.rabbitmq'
+      - '@config.factory'
 
   logger.channel.rabbitmq:
     parent: 'logger.channel_base'
@@ -15,3 +22,10 @@ services:
   logger.channel.rabbitmq-drush:
     parent: 'logger.channel_base'
     arguments: ['rabbitmq-drush']
+
+  rabbitmq.consumer:
+    class: 'Drupal\rabbitmq\Consumer'
+    arguments:
+      - '@plugin.manager.queue_worker'
+      - '@queue'
+      - '@logger.channel.rabbitmq-drush'

@@ -6,7 +6,8 @@ You need to add this to your `settings.php`
 
     $settings['queue_service_queue1'] = 'queue.rabbitmq';
 
-to make sure that `queue1` will use a rabbit message queue rather than the default database queue.
+to make sure that `queue1` will use a rabbit message queue rather than the 
+default database queue.
 
 Now, make sure RabbitMQ is running in the background and go to
 
