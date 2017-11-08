@@ -3,7 +3,6 @@
 namespace Drupal\rabbitmq\Commands;
 
 use Consolidation\OutputFormatters\StructuredData\PropertyList;
-use Drupal\Core\Queue\QueueFactory;
 use Drush\Commands\DrushCommands;
 use Symfony\Component\Yaml\Yaml;
 
@@ -15,11 +14,11 @@ class RabbitmqCommands extends DrushCommands {
   const WORKER_DEFAULTS = ['memory_limit' => NULL, 'max_iterations' => NULL];
 
   /**
-   * The "queue" (factory) service.
+   * The rabbitmq.queue_info service.
    *
-   * @var \Drupal\Core\Queue\QueueFactory
+   * @var \Drupal\rabbitmq\Commands\QueueInfo
    */
-  protected $queueFactory;
+  protected $queueInfo;
 
   /**
    * The SF3 YAML component.
@@ -31,11 +30,13 @@ class RabbitmqCommands extends DrushCommands {
   /**
    * RabbitmqCommands constructor.
    *
-   * @param \Drupal\Core\Queue\QueueFactory $queueFactory
-   *   The queue (factory) service.
+   * @param \Drupal\rabbitmq\Commands\QueueInfo $queueInfo
+   *   The rabbitmq.queue_info service.
    */
-  public function __construct(QueueFactory $queueFactory) {
-    $this->queueFactory = $queueFactory;
+  public function __construct(
+    QueueInfo $queueInfo
+  ) {
+    $this->queueInfo = $queueInfo;
     $this->yaml = new Yaml();
   }
 
@@ -44,6 +45,8 @@ class RabbitmqCommands extends DrushCommands {
    *
    * @param string $worker
    *   The name of the queue to process, also the name of the worker plugin.
+   * @param mixed $options
+   *   The command options.
    *
    * @command rabbitmq-worker
    * @option memory_limit Set the max amount of memory the worker should occupy before exiting. Given in megabytes.
@@ -70,12 +73,7 @@ class RabbitmqCommands extends DrushCommands {
    *   count: Items count
    */
   public function queueInfo($queue_name = NULL) {
-    if (empty($queue_name)) {
-      return;
-    }
-
-    $queue = $this->queueFactory->get($queue_name);
-    $count = $queue->numberOfItems();
+    $count = $this->queueInfo->get($queue_name);
 
     return new PropertyList(['queue-name' => $queue_name, 'count' => $count]);
   }

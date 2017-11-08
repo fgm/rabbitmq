@@ -2,6 +2,6 @@ services:
   rabbitmq.commands:
     class: \Drupal\rabbitmq\Commands\RabbitmqCommands
     arguments:
-      - '@queue'
+      - '@rabbitmq.queue_info'
     tags:
       - { name: drush.command }

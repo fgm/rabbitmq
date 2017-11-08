@@ -78,17 +78,13 @@ function drush_rabbitmq_test_consumer() {
 
 /**
  * Command callback for rabbitmq-queue-info.
+ *
+ * @param string $queueName
  */
 function drush_rabbitmq_queue_info($queueName = NULL) {
-  if (empty($queueName)) {
-    return;
-  }
-
-  /* @var \Drupal\Core\Queue\QueueFactory $queueFactory */
-  $queueFactory = (new Drupal())->service('queue');
-
-  $queue = $queueFactory->get($queueName);
-  $count = $queue->numberOfItems();
+  /** @var \Drupal\rabbitmq\Commands\QueueInfo $info */
+  $info = \Drupal::service('rabbitmq.queue_info');
+  $count = $info->get($queueName);
   echo (new Yaml())->dump([$queueName => $count]);
 }
 
@@ -119,7 +115,7 @@ function drush_rabbitmq_worker($queueName) {
 
   try {
     $consumer->logStart();
-    $consumer->consumeQueueAPI($queueName);
+    $consumer->consumeQueueApi($queueName);
   }
   catch (InvalidWorkerException $e) {
     return drush_set_error(dt("Worker for queue @name does not implement the worker interface.", $queueArgs));

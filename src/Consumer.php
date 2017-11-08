@@ -280,7 +280,7 @@ class Consumer {
    *
    * @TODO Probably needs to do more on SuspendQueueException.
    */
-  public function consumeQueueAPI(string $queueName) {
+  public function consumeQueueApi(string $queueName) {
     $this->preFlightCheck();
     $this->startListening();
     $worker = $this->getWorker($queueName);
