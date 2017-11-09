@@ -133,7 +133,28 @@ class RabbitmqCommands extends DrushCommands {
    * @aliases rqtc
    */
   public function testConsumer() {
+    $connection = new AMQPStreamConnection(
+      ConnectionFactory::DEFAULT_HOST,
+      ConnectionFactory::DEFAULT_PORT,
+      ConnectionFactory::DEFAULT_USER,
+      ConnectionFactory::DEFAULT_PASS
+    );
+    $channel = $connection->channel();
+    $queueName = 'hello';
+    $channel->queue_declare($queueName, FALSE, FALSE, FALSE, FALSE);
+    $this->writeln(' [*] Waiting for messages. To exit press CTRL+C');
 
+    $callback = function ($msg) {
+      $this->writeln(" [x] Received {$msg->body}");
+    };
+
+    $channel->basic_consume($queueName, '', FALSE, TRUE, FALSE, FALSE, $callback);
+
+    while (count($channel->callbacks)) {
+      $channel->wait();
+    }
+    $channel->close();
+    $connection->close();
   }
 
 }
