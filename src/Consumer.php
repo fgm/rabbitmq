@@ -6,6 +6,8 @@ use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\Core\Queue\QueueWorkerInterface;
 use Drupal\Core\Queue\QueueWorkerManagerInterface;
+use Drupal\Core\Queue\RequeueException;
+use Drupal\Core\Queue\SuspendQueueException;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
 use Drupal\rabbitmq\Exception\InvalidArgumentException;
@@ -226,7 +228,10 @@ class Consumer {
     if ($timeout) {
       pcntl_signal(SIGALRM, [$this, 'onTimeout']);
     }
-    $callback = $this->getCallback($worker, $queueName, $timeout);
+    else {
+      $timeout = 30;
+    }
+    $callback = $this->getCallback($worker, $queueName, (int) $timeout);
 
     while ($this->continueListening) {
       try {
@@ -238,7 +243,7 @@ class Consumer {
           if ($timeout) {
             pcntl_alarm($timeout);
           }
-          $channel->wait(NULL, FALSE, $timeout);
+          $channel->wait(NULL, FALSE, (int) $timeout);
           if ($timeout) {
             pcntl_alarm(0);
           }
@@ -405,13 +410,17 @@ class Consumer {
       $this->logger->info('(Drush) Received queued message: @id', [
         '@id' => $msg->delivery_info['delivery_tag'],
       ]);
-
+      /** @var \Drupal\rabbitmq\Queue\Queue $queue */
+      $queue = $this->queueFactory->get($queueName);
       try {
+        $id = $msg->delivery_info['delivery_tag'];
         // Build the item to pass to the queue worker.
         $item = (object) [
           'id' => $msg->delivery_info['delivery_tag'],
           'data' => $this->decode($msg->body),
         ];
+
+        $queue->addMessage($msg->delivery_info['delivery_tag'], $msg);
 
         // Call the queue worker.
         $worker->processItem($item->data);
@@ -422,6 +431,13 @@ class Consumer {
           '@id' => $item->id,
           '@queue' => $queueName,
         ]);
+      }
+      catch (RequeueException $e) {
+        $queue->releaseItem($item);
+      }
+      catch (SuspendQueueException $e) {
+        watchdog_exception('rabbitmq', $e);
+        $queue->releaseItem($item);
       }
       catch (\Exception $e) {
         watchdog_exception('rabbitmq', $e);
@@ -456,15 +472,15 @@ class Consumer {
     try {
       $channel = $queue->getChannel();
     }
-    // May be thrown by StreamIO::__construct()
+      // May be thrown by StreamIO::__construct()
     catch (\InvalidArgumentException $e) {
       throw new InvalidArgumentException($e->getMessage());
     }
-    // May be thrown during getChannel()
+      // May be thrown during getChannel()
     catch (AMQPRuntimeException $e) {
       throw new RuntimeException($e->getMessage());
     }
-    // May be thrown during getChannel()
+      // May be thrown during getChannel()
     catch (AMQPOutOfRangeException $e) {
       throw new OutOfRangeException($e->getMessage());
     }
