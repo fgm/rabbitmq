@@ -3,11 +3,13 @@
 namespace Drupal\rabbitmq\Commands;
 
 use Consolidation\OutputFormatters\StructuredData\PropertyList;
+use Drupal\rabbitmq\ConnectionFactory;
 use Drupal\rabbitmq\Consumer;
 use Drupal\rabbitmq\Service\QueueInfo;
 use Drupal\rabbitmq\Service\Worker;
 use Drush\Commands\DrushCommands;
-use Symfony\Component\Yaml\Yaml;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Message\AMQPMessage;
 
 /**
  * Implementation of the Drush commands for RabbitMQ.
@@ -35,13 +37,6 @@ class RabbitmqCommands extends DrushCommands {
   protected $worker;
 
   /**
-   * The SF3 YAML component.
-   *
-   * @var \Symfony\Component\Yaml\Yaml
-   */
-  protected $yaml;
-
-  /**
    * RabbitmqCommands constructor.
    *
    * @param \Drupal\rabbitmq\Service\QueueInfo $queueInfo
@@ -55,7 +50,6 @@ class RabbitmqCommands extends DrushCommands {
   ) {
     $this->queueInfo = $queueInfo;
     $this->worker = $worker;
-    $this->yaml = new Yaml();
   }
 
   /**
@@ -114,7 +108,20 @@ class RabbitmqCommands extends DrushCommands {
    * @aliases rqtp
    */
   public function testProducer() {
-
+    $connection = new AMQPStreamConnection(
+      ConnectionFactory::DEFAULT_HOST,
+      ConnectionFactory::DEFAULT_PORT,
+      ConnectionFactory::DEFAULT_USER,
+      ConnectionFactory::DEFAULT_PASS
+    );
+    $channel = $connection->channel();
+    $routingKey = $queueName = 'hello';
+    $channel->queue_declare($queueName, FALSE, FALSE, FALSE, FALSE);
+    $message = new AMQPMessage('Hello World!');
+    $channel->basic_publish($message, '', $routingKey);
+    $this->writeln(" [x] Sent 'Hello World!'");
+    $channel->close();
+    $connection->close();
   }
 
   /**
