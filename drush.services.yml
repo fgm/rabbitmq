@@ -3,6 +3,6 @@ services:
     class: \Drupal\rabbitmq\Commands\RabbitmqCommands
     arguments:
       - '@rabbitmq.queue_info'
-      - '@rabbitmq.worker'
+      - '@rabbitmq.consumer'
     tags:
       - { name: drush.command }

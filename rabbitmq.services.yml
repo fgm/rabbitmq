@@ -34,8 +34,3 @@ services:
     class: 'Drupal\rabbitmq\Service\QueueInfo'
     arguments:
       - '@queue'
-
-  rabbitmq.worker:
-    class: 'Drupal\rabbitmq\Service\Worker'
-    arguments:
-      - '@rabbitmq.consumer'

@@ -6,7 +6,6 @@ use Consolidation\OutputFormatters\StructuredData\PropertyList;
 use Drupal\rabbitmq\ConnectionFactory;
 use Drupal\rabbitmq\Consumer;
 use Drupal\rabbitmq\Service\QueueInfo;
-use Drupal\rabbitmq\Service\Worker;
 use Drush\Commands\DrushCommands;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -30,26 +29,26 @@ class RabbitmqCommands extends DrushCommands {
   protected $queueInfo;
 
   /**
-   * The rabbitmq.worker service.
+   * The rabbitmq.consumer service.
    *
-   * @var \Drupal\rabbitmq\Service\Worker
+   * @var \Drupal\rabbitmq\Consumer
    */
-  protected $worker;
+  protected $consumer;
 
   /**
    * RabbitmqCommands constructor.
    *
    * @param \Drupal\rabbitmq\Service\QueueInfo $queueInfo
    *   The rabbitmq.queue_info service.
-   * @param \Drupal\rabbitmq\Service\Worker $worker
-   *   The rabbitmq.worker service.
+   * @param \Drupal\rabbitmq\Consumer $consumer
+   *   The rabbitmq.consumer service.
    */
   public function __construct(
     QueueInfo $queueInfo,
-    Worker $worker
+    Consumer $consumer
   ) {
     $this->queueInfo = $queueInfo;
-    $this->worker = $worker;
+    $this->consumer = $consumer;
   }
 
   /**
@@ -75,7 +74,16 @@ class RabbitmqCommands extends DrushCommands {
    * @aliases rqwk
    */
   public function worker($queueName, $options = self::WORKER_DEFAULTS) {
-    $this->worker->consume($queueName, $options);
+    $this->consumer->setOptionGetter(function (string $name) use ($options) {
+      return (int) $options[$name];
+    });
+
+    drupal_register_shutdown_function(function () use ($queueName) {
+      $this->consumer->shutdownQueue($queueName);
+    });
+
+    $this->consumer->logStart();
+    $this->consumer->consumeQueueApi($queueName);
   }
 
   /**
