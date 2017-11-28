@@ -265,7 +265,7 @@ class Consumer {
       catch (AMQPTimeoutException $e) {
         $this->startListening();
       }
-      catch (Exception $e) {
+      catch (\Exception $e) {
         throw new Exception('Could not obtain channel for queue.', 0, $e);
       }
     }
