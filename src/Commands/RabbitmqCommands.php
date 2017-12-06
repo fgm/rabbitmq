@@ -62,7 +62,7 @@ class RabbitmqCommands extends DrushCommands {
    * @return int
    *   Exit code.
    *
-   * @command rabbitmq-worker
+   * @command rabbitmq:worker
    * @option Consumer::OPTION_MEMORY_LIMIT
    *   Set the max amount of memory the worker should occupy before exiting.
    *   Given in megabytes.
@@ -95,7 +95,7 @@ class RabbitmqCommands extends DrushCommands {
    * @return \Consolidation\OutputFormatters\StructuredData\PropertyList|null
    *   The command result.
    *
-   * @command rabbitmq-queue-info
+   * @command rabbitmq:queue-info
    * @aliases rqqi
    * @field-labels
    *   queue-name: Queue name
@@ -112,7 +112,7 @@ class RabbitmqCommands extends DrushCommands {
    *
    * @see https://www.rabbitmq.com/tutorials/tutorial-one-php.html
    *
-   * @command rabbitmq-test-producer
+   * @command rabbitmq:test-producer
    * @aliases rqtp
    */
   public function testProducer() {
@@ -137,7 +137,7 @@ class RabbitmqCommands extends DrushCommands {
    *
    * @see https://www.rabbitmq.com/tutorials/tutorial-one-php.html
    *
-   * @command rabbitmq-test-consumer
+   * @command rabbitmq:test-consumer
    * @aliases rqtc
    */
   public function testConsumer() {
