@@ -10,5 +10,12 @@
   },
   "require": {
     "php-amqplib/php-amqplib": "^2.6"
+  },
+  "extra": {
+    "drush": {
+      "services": {
+        "drush.services.yml": "^9"
+      }
+    }
   }
 }
