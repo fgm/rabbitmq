@@ -1,0 +1,5 @@
+services:
+  rabbitmq.commands:
+    class: \Drupal\rabbitmq\Command\RabbitmqCommand
+    tags:
+      - { name: drush.command }
