@@ -29,3 +29,8 @@ services:
       - '@plugin.manager.queue_worker'
       - '@queue'
       - '@logger.channel.rabbitmq-drush'
+
+  rabbitmq.queue_info:
+    class: 'Drupal\rabbitmq\Service\QueueInfo'
+    arguments:
+      - '@queue'

@@ -8,6 +8,7 @@ use Drupal\Core\Queue\QueueWorkerInterface;
 use Drupal\Core\Queue\QueueWorkerManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
+use Drupal\rabbitmq\Exception\Exception;
 use Drupal\rabbitmq\Exception\InvalidArgumentException;
 use Drupal\rabbitmq\Exception\InvalidWorkerException;
 use Drupal\rabbitmq\Exception\OutOfRangeException;
@@ -177,7 +178,7 @@ class Consumer {
       $readyMessage = "RabbitMQ worker ready to receive an unlimited number of messages.";
       $readyArgs = [];
     }
-    $this->logger->debug($readyMessage, $readyArgs, WATCHDOG_INFO);
+    $this->logger->debug($readyMessage, $readyArgs);
   }
 
   /**
@@ -264,8 +265,8 @@ class Consumer {
       catch (AMQPTimeoutException $e) {
         $this->startListening();
       }
-      catch (\Exception $e) {
-        throw new \Exception($e);
+      catch (Exception $e) {
+        throw new Exception('Could not obtain channel for queue.', 0, $e);
       }
     }
   }
@@ -280,7 +281,7 @@ class Consumer {
    *
    * @TODO Probably needs to do more on SuspendQueueException.
    */
-  public function consumeQueueAPI(string $queueName) {
+  public function consumeQueueApi(string $queueName) {
     $this->preFlightCheck();
     $this->startListening();
     $worker = $this->getWorker($queueName);
@@ -487,7 +488,7 @@ class Consumer {
     // Before we start listening for messages, make sure the worker is valid.
     $worker = $this->workerManager->createInstance($queueName);
     if (!($worker instanceof QueueWorkerInterface)) {
-      throw new InvalidWorkerException("Invalid worker for requested queue.");
+      throw new InvalidWorkerException('Invalid worker for requested queue.');
     }
     return $worker;
   }

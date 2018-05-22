@@ -1,13 +1,15 @@
 {
-  "name": "drupal/rabbitmq",
-  "type": "drupal-module",
   "description": "RabbitMQ Integration for Drupal",
-  "license": "GPL-2.0+",
-  "homepage": "https://www.drupal.org/project/rabbitmq",
-  "support": {
-    "issues": "https://www.drupal.org/project/issues/rabbitmq",
-    "source": "https://cgit.drupalcode.org/rabbitmq"
+  "extra": {
+    "drush": {
+      "services": {
+	"drush.services.yml": "^9"
+      }
+    }
   },
+  "homepage": "https://www.drupal.org/project/rabbitmq",
+  "license": "GPL-2.0+",
+  "name": "drupal/rabbitmq",
   "require": {
     "php-amqplib/php-amqplib": "^2.7"
   },
@@ -16,5 +18,10 @@
   },
   "suggest": {
     "ext-pcntl": "Needed to support the timeout option"
-  }
+  },
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/rabbitmq",
+    "source": "https://cgit.drupalcode.org/rabbitmq"
+  },
+  "type": "drupal-module"
 }

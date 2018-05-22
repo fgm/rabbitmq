@@ -47,7 +47,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
       }
 
       $channel->basic_publish($item, $exchange, $routing_key);
-      $this->logger->info('Item sent to queue %queue', $logger_args);
+      $this->logger->debug('Item sent to queue %queue', $logger_args);
       $result = TRUE;
     }
     catch (\Exception $e) {
@@ -116,7 +116,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
       'data' => json_decode($msg->body),
       'expire' => time() + $lease_time,
     ];
-    $this->logger->info('Item @id claimed from @queue', [
+    $this->logger->debug('Item @id claimed from @queue', [
       'channel' => static::LOGGER_CHANNEL,
       '@id' => $item->id,
       '@queue' => $this->name,
@@ -132,7 +132,7 @@ class Queue extends QueueBase implements ReliableQueueInterface {
    *   An item returned by DrupalQueueInterface::claimItem().
    */
   public function deleteItem($item) {
-    $this->logger->info('Item @id acknowledged from @queue', [
+    $this->logger->debug('Item @id deleted from @queue', [
       'channel' => static::LOGGER_CHANNEL,
       '@id' => $item->id,
       '@queue' => $this->name,
