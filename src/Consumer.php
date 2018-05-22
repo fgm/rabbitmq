@@ -178,7 +178,7 @@ class Consumer {
       $readyMessage = "RabbitMQ worker ready to receive an unlimited number of messages.";
       $readyArgs = [];
     }
-    $this->logger->debug($readyMessage, $readyArgs, WATCHDOG_INFO);
+    $this->logger->debug($readyMessage, $readyArgs);
   }
 
   /**
